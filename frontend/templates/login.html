@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in | Sencyc</title>
+  <link rel="stylesheet" href="../statics/css/styles.css?v=10">
+</head>
+<body class="auth-body">
+  <main class="auth-layout">
+    <section class="auth-brand-panel"><div class="brand"><span class="brand-mark">S</span><span>Sencyc</span></div><div class="auth-message"><span class="eyebrow">Attack surface intelligence</span><h1>See what attackers see.</h1><p>Discover, understand, and continuously monitor every asset exposed by your organization.</p><div class="auth-points"><span>✓ Continuous asset discovery</span><span>✓ Prioritized security findings</span><span>✓ Real-time change alerts</span></div></div></section>
+    <section class="auth-form-panel"><button class="theme-toggle auth-theme-toggle" id="themeToggle" type="button" title="Switch to dark mode"><span class="theme-icon">☾</span><span class="theme-label">Dark mode</span></button><div class="auth-form"><div class="mobile-brand brand"><span class="brand-mark">S</span><span>Sencyc</span></div><span class="eyebrow">Welcome back</span><h2>Sign in to your workspace</h2><p class="subtitle">Enter your details to access your security dashboard.</p><form id="auth-form"><label>Email address<input type="email" placeholder="you@company.com" required></label><label>Password<input type="password" placeholder="Enter your password" required></label><div class="form-options"><label class="check"><input type="checkbox"> Remember me</label><a href="#">Forgot password?</a></div><button class="button" type="submit">Sign in</button></form><div class="auth-divider"><span>or continue with</span></div><button class="button secondary oauth">G Continue with Google</button><p class="auth-switch">Do not have an account? <a href="register.html">Create one</a></p></div></section>
+  </main>
+  <script>const themeToggle=document.getElementById("themeToggle");function setTheme(theme){document.documentElement.dataset.theme=theme;localStorage.setItem("sencyc-theme",theme);const dark=theme==="dark";themeToggle.title=dark?"Switch to light mode":"Switch to dark mode";themeToggle.innerHTML=`<span class="theme-icon">${dark?"☀":"☾"}</span><span class="theme-label">${dark?"Light mode":"Dark mode"}</span>`}setTheme(localStorage.getItem("sencyc-theme")||"dark");themeToggle.onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");document.getElementById("auth-form").onsubmit=function(e){e.preventDefault();window.location.href="index.html"}</script>
+</body>
+</html>

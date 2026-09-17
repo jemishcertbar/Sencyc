@@ -1,0 +1,38 @@
+.chevron-icon {
+  display: inline-flex;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  flex: 0 0 auto;
+  transform: rotate(45deg);
+  transition: transform .2s ease;
+}
+
+.sidebar-toggle-icon {
+  transform: rotate(135deg) !important;
+}
+
+.dropdown-label,
+.dropdown-icon,
+.show-more span:first-child,
+.nav-section-label {
+  vertical-align: middle;
+}
+
+.show-more {
+  align-items: center;
+}
+
+.show-more-icon.is-up,
+.nav-section-icon.is-up {
+  transform: rotate(225deg) !important;
+}
+
+.button.secondary.small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  line-height: 1;
+}

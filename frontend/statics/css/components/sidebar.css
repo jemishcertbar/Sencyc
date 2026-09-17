@@ -1,0 +1,38 @@
+.nav-section-toggle {
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-section-toggle .nav-section-icon {
+  margin-left: auto;
+}
+
+.sidebar-toggle .sidebar-toggle-icon {
+  width: 9px;
+  height: 9px;
+}
+
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-icon-svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.sidebar.collapsed .nav-icon {
+  width: 24px;
+}
+
+.sidebar.collapsed .sidebar-icon-svg {
+  width: 21px;
+  height: 21px;
+}
