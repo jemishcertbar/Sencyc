@@ -2,7 +2,7 @@ name: Deploy Static Content to Pages
 
 on:
   push:
-    branches: ["main"] # अगर आपकी मुख्य ब्रांच master है, तो यहाँ master लिखें
+    branches: ["frontend"]
 
 permissions:
   contents: read
