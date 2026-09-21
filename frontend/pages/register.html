@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account | Sencyc</title>
+  <link rel="stylesheet" href="../css/styles.css?v=11">
+</head>
+
+<body class="auth-body">
+  <main class="auth-layout">
+    <section class="auth-brand-panel">
+      <div class="brand"><span class="brand-mark">S</span><span>Sencyc</span></div>
+      <div class="auth-message"><span class="eyebrow">Start with visibility</span>
+        <h1>Know your surface before they do.</h1>
+        <p>Build a complete, continuously updated inventory of your internet-facing assets.</p>
+        <div class="auth-points"><span>✓ Find unknown assets</span><span>✓ Reduce exposure quickly</span><span>✓
+            Keep your team aligned</span></div>
+      </div>
+    </section>
+    <section class="auth-form-panel"><button class="theme-toggle auth-theme-toggle" id="themeToggle" type="button"
+        title="Switch to dark mode"><span class="theme-icon">☾</span><span class="theme-label">Dark
+          mode</span></button>
+      <div class="auth-form">
+        <div class="mobile-brand brand"><span class="brand-mark">S</span><span>Sencyc</span></div><span
+          class="eyebrow">Get started</span>
+        <h2>Create your account</h2>
+        <p class="subtitle">Set up your workspace in less than two minutes.</p>
+        <form id="auth-form">
+          <div class="form-row"><label>First name<input required placeholder="Jordan"></label><label>Last name<input
+                required placeholder="Davis"></label></div><label>Work email<input type="email"
+              placeholder="you@company.com" required></label><label>Password<input type="password"
+              placeholder="At least 8 characters" minlength="8" required></label><label class="check terms"><input
+              type="checkbox" required> I agree to the Terms of Service and Privacy Policy</label><button class="button"
+            type="submit">Create account</button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="login.html">Sign in</a></p>
+      </div>
+    </section>
+  </main>
+  <script>const themeToggle = document.getElementById("themeToggle"); function setTheme(theme) { document.documentElement.dataset.theme = theme; localStorage.setItem("sencyc-theme", theme); const dark = theme === "dark"; themeToggle.title = dark ? "Switch to light mode" : "Switch to dark mode"; themeToggle.innerHTML = `<span class="theme-icon">${dark ? "☀" : "☾"}</span><span class="theme-label">${dark ? "Light mode" : "Dark mode"}</span>` } setTheme(localStorage.getItem("sencyc-theme") || "dark"); themeToggle.onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"); document.getElementById("auth-form").onsubmit = function (e) { e.preventDefault(); window.location.href = "../index.html" }</script>
+</body>
+
+</html>
