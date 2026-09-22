@@ -1,3 +1,8 @@
+const demoBanner = document.createElement("div");
+demoBanner.innerHTML = "⚠️ DEMO DATA MODE";
+demoBanner.style.cssText = "position: fixed; top: 0; left: 50%; transform: translateX(-50%); background: #efad4c; color: #111; padding: 4px 16px; border-radius: 0 0 8px 8px; font-size: 12px; font-weight: 700; z-index: 10000; box-shadow: 0 2px 10px rgba(0,0,0,0.15); text-transform: uppercase; letter-spacing: 0.5px; pointer-events: none;";
+document.body.appendChild(demoBanner);
+
 const root = document.getElementById("view-root"), toast = document.getElementById("toast"), breadcrumb = document.getElementById("breadcrumb");
 const themeToggle = document.getElementById("themeToggle");
 const sidebar = document.getElementById("sidebar");
