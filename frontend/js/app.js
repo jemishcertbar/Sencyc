@@ -137,6 +137,51 @@ function listView(title, subtitle, kind) {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${isFind ? "Risk management" : "Asset inventory"}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div></div><div class="stats-grid">${stat(isFind ? "Open findings" : "Total assets", isFind ? "38" : "248", isFind ? "12 critical" : "↑ 12.4% vs last month", "◈")}${stat("Critical", isFind ? "12" : "18", isFind ? "Needs attention" : "↑ 4 this week", "△")}${stat(isFind ? "Resolved this month" : "New this week", isFind ? "24" : "34", isFind ? "↑ 18.2%" : "↑ 16.7%", "✦")}${stat("Monitored", isFind ? "92%" : "97%", isFind ? "of all findings" : "of all assets", "✓")}</div><section class="panel table-panel"><div class="page-toolbar"><input class="filter-input" id="table-filter" placeholder="⌕  Filter ${isFind ? "findings" : "assets"}..."><button class="button secondary small">${dropdown("All types")}</button><button class="button secondary small">${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export">Export CSV</button></div><div class="results-info">${isFind ? "38 findings" : "248 assets"} found · Updated just now</div><div class="table-wrap"><table><thead><tr><th>${isFind ? "Finding" : "Asset"}</th><th>${isFind ? "Affected asset" : "IP address"}</th><th>${isFind ? "Category" : "Open ports"}</th><th>${isFind ? "Detected" : "Technologies"}</th><th>Risk</th><th>Status</th></tr></thead><tbody id="data-rows">${rows}</tbody></table></div></section></div>`;
 }
 function dropdown(label) { return `<span class="dropdown-label">${label}</span><span class="dropdown-icon" aria-hidden="true"></span>` }
+function setupScanPanel() {
+  if (document.body.dataset.page !== "overview" || document.getElementById("zmap-scan-panel")) return;
+  const page = root.querySelector(".page");
+  if (!page) return;
+  const panel = document.createElement("section");
+  panel.id = "zmap-scan-panel";
+  panel.className = "panel";
+  panel.style.marginTop = "18px";
+  panel.innerHTML = '<div class="panel-header"><div><span class="panel-title">ZMap port scan</span><div class="muted-link">Authorized allowlist · TCP 80, 22, 443</div></div><button class="button small" id="start-zmap-scan" type="button">Start scan</button></div><div class="results-info" id="zmap-scan-status">No scan run yet.</div><div id="zmap-scan-error" style="display: none; padding: 12px; margin: 0 16px 16px 16px; background-color: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.2); border-radius: 6px; font-family: monospace; white-space: pre-wrap;"></div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Discovered</th></tr></thead><tbody id="zmap-scan-results"><tr><td colspan="5" class="muted-link">Results from the next scan will appear here.</td></tr></tbody></table></div>';
+  page.appendChild(panel);
+
+  const status = panel.querySelector("#zmap-scan-status");
+  const errorBox = panel.querySelector("#zmap-scan-error");
+  const resultsBody = panel.querySelector("#zmap-scan-results");
+  const button = panel.querySelector("#start-zmap-scan");
+  let pollTimer;
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[character]));
+  const renderResults = data => {
+    if (data.error) {
+      status.textContent = "Scan failed.";
+      errorBox.textContent = `Error: ${data.error}`;
+      errorBox.style.display = "block";
+    } else {
+      errorBox.style.display = "none";
+      if (data.running) status.textContent = "Scan running... waiting for ZMap results.";
+      else status.textContent = `${data.results.length} open port${data.results.length === 1 ? "" : "s"} found${data.lastScan ? ` · ${new Date(data.lastScan).toLocaleString()}` : ""}`;
+    }
+    button.disabled = data.running;
+    button.textContent = data.running ? "Scanning..." : "Start scan";
+    resultsBody.innerHTML = data.results.length ? data.results.map(result => `<tr><td>${escapeHtml(result.ip)}</td><td>${result.port}</td><td>${escapeHtml(result.protocol)}</td><td><span class="pill active">${escapeHtml(result.state)}</span></td><td>${new Date(result.discoveredAt).toLocaleString()}</td></tr>`).join("") : '<tr><td colspan="5" class="muted-link">No open ports reported.</td></tr>';
+    if (data.running) pollTimer = setTimeout(loadResults, 2000);
+  };
+  const loadResults = () => fetch("/api/results").then(response => response.json()).then(renderResults).catch(error => { status.textContent = "Unable to load scan results."; errorBox.textContent = `Error: ${error.message}`; errorBox.style.display = "block"; button.disabled = false; });
+  button.onclick = () => {
+    button.disabled = true;
+    status.textContent = "Starting scan...";
+    errorBox.style.display = "none";
+    fetch("/api/scan", { method: "POST" }).then(response => response.json().then(data => ({ ok: response.ok, data }))).then(({ ok, data }) => {
+      if (!ok) throw new Error(data.error || "Unable to start scan");
+      renderResults(data);
+    }).catch(error => { status.textContent = "Unable to start scan."; errorBox.textContent = `Error: ${error.message}`; errorBox.style.display = "block"; button.disabled = false; button.textContent = "Start scan"; });
+  };
+  loadResults();
+  window.addEventListener("beforeunload", () => clearTimeout(pollTimer), { once: true });
+}
 function searchView(query = "") { return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Discovery</span><h1>Global search</h1><p class="subtitle">Search across every asset, service, and finding in your workspace.</p></div></div><section class="panel" style="margin-bottom:18px"><div class="search-box" style="border:1px solid var(--line);max-width:none"><input id="global-search" value="${query}" placeholder="Search domains, IPs, technologies, CVEs..."><select id="global-search-limit" class="search-limit" title="Results limit"><option value="10">10 results</option><option value="25">25 results</option><option value="50" selected>50 results</option><option value="100">100 results</option><option value="250">250 results</option><option value="500">500 results</option></select><button class="button" data-search>Search</button></div><div class="quick-searches" style="margin-top:12px"><span data-query="domain:acme.com">domain:acme.com</span><span data-query="type:ip">type:ip</span><span data-query="severity:critical">severity:critical</span></div></section><section class="panel table-panel"><div class="panel-header"><span class="panel-title">${query ? "Results for “" + query + "”" : "All indexed assets"}</span><span class="muted-link">248 results · Save search</span></div><div class="page-toolbar"><button class="button secondary small">${dropdown("All results")}</button><button class="button secondary small">${dropdown("Asset type")}</button><button class="button secondary small">${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export">Export</button></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody>${assetRows()}</tbody></table></div></section></div>` }
 function simplePage(title, subtitle, eyebrow, body) { return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${eyebrow}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div><button class="button" data-action="create">+ Create new</button></div>${body}</div>` }
 function render(view, extra = "") { let html = view === "asset-detail" ? assetDetail(extra) : view === "overview" ? overview() : view === "search" ? searchView(extra) : view === "assets" ? listView("Assets", "Discover and manage everything exposed across your organization.", "Asset inventory", "assets") : view === "findings" ? listView("Findings", "Prioritize and remediate risks across your attack surface.", "Risk management", "findings") : view === "watchlists" ? simplePage("Watchlists", "Monitor saved searches and get notified when they change.", "Continuous monitoring", `<section class="panel empty"><strong>No watchlists yet</strong>Create a watchlist from any search to track changes over time.<br><br><button class="button" data-action="create">Create your first watchlist</button></section>`) : view === "alerts" ? simplePage("Alerts", "Stay informed when important changes happen.", "Notifications", `<section class="panel"><div class="panel-header"><span class="panel-title">Alert rules</span><span class="muted-link">4 active rules</span></div><div class="activity"><span class="activity-dot"></span><div><p><b>Critical finding detected</b><br>All monitored assets · Email + in-app</p></div><span class="pill active">Active</span></div><div class="activity"><span class="activity-dot" style="background:#efad4c"></span><div><p><b>Certificate expires within 14 days</b><br>All domains · Email</p></div><span class="pill active">Active</span></div></section>`) : view === "reports" ? simplePage("Reports", "Create and schedule security reports for your team.", "Insights", `<section class="panel empty"><strong>No reports generated</strong>Build an executive summary or detailed asset report in a few clicks.<br><br><button class="button" data-action="create">Generate a report</button></section>`) : view === "integrations" ? simplePage("Integrations", "Connect Sencyc to the tools your team already uses.", "Connections", `<section class="panel"><div class="panel-header"><span class="panel-title">Available integrations</span></div><div class="stats-grid" style="margin:0">${stat("Slack", "Connect", "Send alerts to channels", "◈")}${stat("Jira", "Connect", "Create tickets from findings", "△")}${stat("Webhooks", "Connect", "Stream events to your tools", "⌘")}</div></section>`) : `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>Settings</h1><p class="subtitle">Manage your profile, workspace, and notification preferences.</p></div></div><div class="settings-layout"><section class="panel settings-menu"><button class="active">Profile</button><button>Workspace</button><button>Notifications</button><button>Security</button><button>API keys</button><button>Audit log</button></section><section class="panel"><div class="panel-header"><span class="panel-title">Profile information</span><button class="button small" data-action="save">Save changes</button></div><div class="form-row"><div class="form-group"><label>First name</label><input value="Jordan"></div><div class="form-group"><label>Last name</label><input value="Davis"></div></div><div class="form-group"><label>Email address</label><input value="jordan.davis@acme.com"></div><div class="form-group"><label>Role</label><input value="Administrator" disabled></div></section></div></div>`; root.innerHTML = html; breadcrumb.textContent = view === "asset-detail" ? "Asset details" : view[0].toUpperCase() + view.slice(1); document.querySelectorAll(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view)); bind() }
@@ -161,6 +206,7 @@ const initialHash = decodeURIComponent(window.location.hash.replace(/^#asset\//,
 if (window.location.hash.startsWith("#asset/")) render("asset-detail", initialHash);
 else render(document.body.dataset.page || "overview");
 setupOverviewDetails();
+setupScanPanel();
 requestAnimationFrame(() => setTimeout(hidePageLoader, 180));
 window.addEventListener("hashchange", () => {
   if (window.location.hash.startsWith("#asset/")) render("asset-detail", decodeURIComponent(window.location.hash.replace(/^#asset\//, "")));
