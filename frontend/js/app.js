@@ -145,7 +145,7 @@ function setupScanPanel() {
   panel.id = "zmap-scan-panel";
   panel.className = "panel";
   panel.style.marginTop = "18px";
-  panel.innerHTML = '<div class="panel-header"><div><span class="panel-title">ZMap port scan</span><div class="muted-link">Authorized allowlist · TCP 80, 22, 443</div></div><button class="button small" id="start-zmap-scan" type="button">Start scan</button></div><div class="results-info" id="zmap-scan-status">No scan run yet.</div><div id="zmap-scan-error" style="display: none; padding: 12px; margin: 0 16px 16px 16px; background-color: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.2); border-radius: 6px; font-family: monospace; white-space: pre-wrap;"></div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Discovered</th></tr></thead><tbody id="zmap-scan-results"><tr><td colspan="5" class="muted-link">Results from the next scan will appear here.</td></tr></tbody></table></div>';
+  panel.innerHTML = '<div class="panel-header"><div><span class="panel-title">ZMap port scan</span><div class="muted-link">Authorized allowlist · TCP 80, 22, 443 · Auto scan every minute</div></div><button class="button small" id="start-zmap-scan" type="button">Start scan</button></div><div class="results-info" id="zmap-scan-status">No scan run yet.</div><div id="zmap-scan-error" style="display: none; padding: 12px; margin: 0 16px 16px 16px; background-color: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.2); border-radius: 6px; font-family: monospace; white-space: pre-wrap;"></div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Discovered</th></tr></thead><tbody id="zmap-scan-results"><tr><td colspan="5" class="muted-link">Results from the next scan will appear here.</td></tr></tbody></table></div>';
   page.appendChild(panel);
 
   const status = panel.querySelector("#zmap-scan-status");
@@ -167,7 +167,7 @@ function setupScanPanel() {
     button.disabled = data.running;
     button.textContent = data.running ? "Scanning..." : "Start scan";
     resultsBody.innerHTML = data.results.length ? data.results.map(result => `<tr><td>${escapeHtml(result.ip)}</td><td>${result.port}</td><td>${escapeHtml(result.protocol)}</td><td><span class="pill active">${escapeHtml(result.state)}</span></td><td>${new Date(result.discoveredAt).toLocaleString()}</td></tr>`).join("") : '<tr><td colspan="5" class="muted-link">No open ports reported.</td></tr>';
-    if (data.running) pollTimer = setTimeout(loadResults, 2000);
+    pollTimer = setTimeout(loadResults, data.running ? 2000 : 5000);
   };
   const loadResults = () => fetch("/api/results").then(response => response.json()).then(renderResults).catch(error => { status.textContent = "Unable to load scan results."; errorBox.textContent = `Error: ${error.message}`; errorBox.style.display = "block"; button.disabled = false; });
   button.onclick = () => {

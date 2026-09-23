@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 func main() {
@@ -19,6 +20,7 @@ func main() {
 	}
 
 	scanner := NewZMapScanner(allowlist, useSudo)
+	go runScheduledScans(scanner)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/scan", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -66,4 +68,21 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		log.Printf("%s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
+}
+
+func runScheduledScans(scanner *ZMapScanner) {
+	startScan := func() {
+		if err := scanner.Start(context.Background()); err != nil {
+			log.Printf("scheduled scan not started: %v", err)
+			return
+		}
+		log.Printf("scheduled scan started")
+	}
+
+	startScan()
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		startScan()
+	}
 }
