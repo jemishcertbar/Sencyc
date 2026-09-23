@@ -97,57 +97,54 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 		return nil, fmt.Errorf("allowlist: %w", err)
 	}
 
+	args := []string{"-p", portList(), "-w", s.allowlist, "-b", "/dev/null", "-O", "csv", "-f", "saddr,sport,classification,success,repeat", "--output-filter=success=1 && repeat=0", "--no-header-row"}
+	lines, err := s.runZMap(ctx, args)
+	if err != nil {
+		return nil, fmt.Errorf("zmap ports %s: %w", portList(), err)
+	}
+
 	seen := make(map[string]bool)
 	results := make([]ScanResult, 0)
-	for _, port := range scanPorts {
-		lines, err := s.runPort(ctx, port)
-		if err != nil {
-			return results, fmt.Errorf("zmap port %d: %w", port, err)
+	for _, line := range lines {
+		fields := strings.Split(strings.TrimSpace(line), ",")
+		if len(fields) != 5 {
+			continue
 		}
-		for _, line := range lines {
-			fields := strings.Fields(strings.TrimSpace(line))
-			if len(fields) == 0 {
-				continue
-			}
-			ip := strings.Trim(fields[0], ",")
-			if net.ParseIP(ip) == nil {
-				continue
-			}
-			key := ip + ":" + strconv.Itoa(port)
-			if seen[key] {
-				continue
-			}
-			seen[key] = true
-			results = append(results, ScanResult{IP: ip, Port: port, Protocol: "TCP", State: "open", DiscoveredAt: time.Now().UTC()})
+		ip := strings.Trim(fields[0], "\" ")
+		port, parseErr := strconv.Atoi(strings.Trim(fields[1], "\" "))
+		classification := strings.Trim(fields[2], "\" ")
+		success := strings.Trim(fields[3], "\" ")
+		repeat := strings.Trim(fields[4], "\" ")
+		if parseErr != nil || net.ParseIP(ip) == nil || !containsPort(port) || classification != "synack" || success != "1" || repeat != "0" {
+			continue
 		}
+		key := ip + ":" + strconv.Itoa(port)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		results = append(results, ScanResult{IP: ip, Port: port, Protocol: "TCP", State: "open", DiscoveredAt: time.Now().UTC()})
 	}
 	return results, nil
 }
 
-func (s *ZMapScanner) runPort(ctx context.Context, port int) ([]string, error) {
-	args := []string{"-p", strconv.Itoa(port), "-w", s.allowlist, "-b", "/dev/null", "-f", "saddr"}
+func (s *ZMapScanner) runZMap(ctx context.Context, args []string) ([]string, error) {
 	command := "zmap"
 	var stdinReader *strings.Reader
-
 	if s.useSudo {
 		command = "sudo"
 		sudoPass := os.Getenv("SUDO_PASSWORD")
-
 		if sudoPass != "" {
-			// -S tells sudo to read the password from standard input
 			args = append([]string{"-S", "zmap"}, args...)
 			stdinReader = strings.NewReader(sudoPass + "\n")
 		} else {
-			// default non-interactive sudo
 			args = append([]string{"-n", "zmap"}, args...)
 		}
 	}
-
 	cmd := exec.CommandContext(ctx, command, args...)
 	if stdinReader != nil {
 		cmd.Stdin = stdinReader
 	}
-
 	output, err := cmd.Output()
 	if err != nil {
 		if ctx.Err() != nil {
@@ -156,6 +153,23 @@ func (s *ZMapScanner) runPort(ctx context.Context, port int) ([]string, error) {
 		return nil, fmt.Errorf("%w; verify ZMap is installed and passwordless sudo is configured", err)
 	}
 	return strings.Split(string(output), "\n"), nil
+}
+
+func portList() string {
+	ports := make([]string, len(scanPorts))
+	for i, port := range scanPorts {
+		ports[i] = strconv.Itoa(port)
+	}
+	return strings.Join(ports, ",")
+}
+
+func containsPort(port int) bool {
+	for _, allowed := range scanPorts {
+		if port == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 func validateAllowlist(path string) error {
