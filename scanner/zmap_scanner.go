@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -156,8 +155,6 @@ func (s *ZMapScanner) runPort(ctx context.Context, port int) ([]string, error) {
 		}
 		return nil, fmt.Errorf("%w; verify ZMap is installed and passwordless sudo is configured", err)
 	}
-	println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-	log.Printf("ZMap port %d raw output:\n%s", port, string(output))
 	return strings.Split(string(output), "\n"), nil
 }
 
