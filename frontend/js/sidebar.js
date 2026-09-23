@@ -1,3 +1,4 @@
+// Return the SVG markup for a sidebar item icon.
 function sidebarIcon(name) {
   const paths = {
     overview: '<path d="m3 10 5-5 5 5v5H9v-3H7v3H3z"/>',
@@ -13,6 +14,7 @@ function sidebarIcon(name) {
   return `<svg class="sidebar-icon-svg" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
 }
 
+// Build the sidebar and restore its saved open and collapsed sections.
 function sidebarTemplate() {
   const workspaceOpen = localStorage.getItem("sencyc-workspace-open") !== "false";
   const manageOpen = localStorage.getItem("sencyc-manage-open") === "true";
@@ -49,6 +51,7 @@ function sidebarTemplate() {
   </aside><div class="sidebar-backdrop" id="sidebarBackdrop"></div>`;
 }
 
+// Add a menu button to the top bar when the page does not already have one.
 function injectMobileSidebarToggle() {
   const topbar = document.querySelector(".topbar");
   if (!topbar || document.getElementById("mobileSidebarToggle")) return;
