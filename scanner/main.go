@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// main starts the scanner, sets up the API and serves the web pages.
 func main() {
 	frontendDir := envOr("FRONTEND_DIR", filepath.Join("..", "frontend"))
 	allowlist := envOr("ZMAP_ALLOWLIST", "lab-allowlist.txt")
@@ -48,6 +49,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(address, loggingMiddleware(mux)))
 }
 
+// envOr returns an environment value, or a default when it is missing.
 func envOr(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -55,6 +57,7 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+// writeJSON sends a value to the client as a JSON response.
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -63,6 +66,7 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	}
 }
 
+// loggingMiddleware logs each request before sending it to the next handler.
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s", r.Method, r.URL.Path)
@@ -70,6 +74,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// runScheduledScans starts a scan now and then repeats it every minute.
 func runScheduledScans(scanner *ZMapScanner) {
 	startScan := func() {
 		if err := scanner.Start(context.Background()); err != nil {

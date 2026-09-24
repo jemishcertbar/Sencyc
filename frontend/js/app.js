@@ -55,6 +55,7 @@ function updateSidebarToggleState() {
       : "Open navigation menu";
   }
 }
+// closeSidebar hides the menu and saves its collapsed state.
 function closeSidebar() {
   sidebar.classList.add("collapsed");
   sidebar.classList.remove("open");
@@ -62,6 +63,7 @@ function closeSidebar() {
   localStorage.setItem("sencyc-sidebar-collapsed", "true");
   updateSidebarToggleState();
 }
+// openSidebar shows the menu and saves its open state.
 function openSidebar() {
   sidebar.classList.remove("collapsed");
   sidebar.classList.add("open");
@@ -69,6 +71,7 @@ function openSidebar() {
   if (window.innerWidth <= 900) sidebarBackdrop.classList.add("visible");
   updateSidebarToggleState();
 }
+// setTheme applies the selected color theme and saves it for the next visit.
 function setTheme(theme) {
   const dark = theme === "dark";
   document.documentElement.dataset.theme = theme;
@@ -115,6 +118,7 @@ themeToggle.onclick = () =>
   setTheme(
     document.documentElement.dataset.theme === "dark" ? "light" : "dark",
   );
+// setupMobileToggle connects the mobile menu button to the sidebar.
 function setupMobileToggle() {
   const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
   if (!mobileSidebarToggle) return;
@@ -143,17 +147,21 @@ if (sidebarToggle) {
         : closeSidebar();
 }
 updateSidebarToggleState();
+// notify shows a short message at the bottom of the page.
 function notify(message) {
   toast.textContent = message;
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 2500);
 }
+// stat builds the HTML for one dashboard number card.
 function stat(label, value, trend, icon, down = false) {
   return `<div class="stat-card"><div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div><div class="stat-value">${value}</div><span class="trend ${down ? "down" : ""}">${trend}</span></div>`;
 }
+// discoveryChart builds the chart from the saved discovery data.
 function discoveryChart() {
   return `<div class="chart-summary"><span><b>116</b> assets discovered</span><span class="chart-change">+18.4% <small>vs previous period</small></span></div><div class="chart-shell"><div class="chart-y-axis"><span>120</span><span>90</span><span>60</span><span>30</span><span>0</span></div><div class="chart-area"><div class="chart">${discoveryPoints.map((value, index) => `<span class="bar" style="height:${value / 1.25}%" title="${discoveryDates[index]}: ${value} assets"><i>${value}</i></span>`).join("")}</div><div class="chart-labels">${discoveryDates.map((date) => `<span>${date}</span>`).join("")}</div></div></div><div class="chart-legend"><span><i class="legend-dot"></i>New assets discovered</span><span class="muted-link">Daily count · Last 30 days</span></div>`;
 }
+// assetRows builds table rows for the given list of assets.
 function assetRows(list = assets) {
   return list
     .map(
@@ -162,6 +170,7 @@ function assetRows(list = assets) {
     )
     .join("");
 }
+// assetDetail builds the detail page for one asset.
 function assetDetail(name) {
   const asset = assets.find((item) => item.name === name) || assets[0];
   const ports = asset.port.split(", ");
@@ -190,9 +199,11 @@ function assetDetail(name) {
     </div>
   </div>`;
 }
+// overview builds the main dashboard page.
 function overview() {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Security overview</span><h1>Good morning, Jordan</h1><p class="subtitle">Here is what is happening across your attack surface today.</p></div></div><section class="search-hero"><span class="eyebrow">Asset discovery</span><h2>Search your attack surface</h2><p>Find domains, IPs, technologies, certificates, and vulnerabilities in seconds.</p><div class="search-box"><input id="hero-search" placeholder="Try a domain, IP address, organization, or technology..."><select id="hero-search-limit" class="search-limit" title="Results limit"><option value="10">10 results</option><option value="25">25 results</option><option value="50" selected>50 results</option><option value="100">100 results</option><option value="250">250 results</option><option value="500">500 results</option></select><button class="button" data-search>Search</button></div><div class="quick-searches"><span data-query="domain:acme.com">domain:acme.com</span><span data-query="severity:critical">severity:critical</span><span data-query="technology:nginx">technology:nginx</span><span data-query="port:22">port:22</span></div></section><div class="stats-grid inventory-stats">${stat("Hosts", "1,234", "↑ 12.4% this month", "◈")}${stat("Open ports", "232", "↑ 8 new this week", "⌁")}${stat("Certificates", "321", "7 expiring soon", "◇")}${stat("Technologies", "186", "Across 248 assets", "▦")}${stat("Domains", "248", "97% monitored", "◎")}${stat("Findings", "38", "12 critical", "△", true)}</div><div class="dashboard-grid"><section class="panel"><div class="panel-header"><span class="panel-title">Asset discovery</span><span class="muted-link">Last 30 days ▾</span></div>${discoveryChart()}</section><section class="panel"><div class="panel-header"><span class="panel-title">Recent activity</span><span class="muted-link">View all</span></div><div class="activity"><span class="activity-dot"></span><div><p><b>New subdomain discovered</b><br>dev-api.acme.com</p><small>12 minutes ago</small></div></div><div class="activity"><span class="activity-dot" style="background:#efad4c"></span><div><p><b>Certificate expires soon</b><br>staging.acme.com</p><small>1 hour ago</small></div></div><div class="activity"><span class="activity-dot" style="background:#e66b77"></span><div><p><b>Critical finding detected</b><br>203.0.113.42:8080</p><small>3 hours ago</small></div></div><div class="activity"><span class="activity-dot" style="background:#54b8a0"></span><div><p><b>Technology changed</b><br>acme.com</p><small>Yesterday</small></div></div></section></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Recently discovered assets</span><span class="muted-link" data-view-link="assets">View all assets →</span></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody>${assetRows(assets.slice(0, 4))}</tbody></table></div></section></div>`;
 }
+// listView builds either the asset table or the findings table.
 function listView(title, subtitle, kind) {
   const isFind = kind === "findings";
   const rows = isFind
@@ -205,9 +216,11 @@ function listView(title, subtitle, kind) {
     : assetRows();
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${isFind ? "Risk management" : "Asset inventory"}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div></div><div class="stats-grid">${stat(isFind ? "Open findings" : "Total assets", isFind ? "38" : "248", isFind ? "12 critical" : "↑ 12.4% vs last month", "◈")}${stat("Critical", isFind ? "12" : "18", isFind ? "Needs attention" : "↑ 4 this week", "△")}${stat(isFind ? "Resolved this month" : "New this week", isFind ? "24" : "34", isFind ? "↑ 18.2%" : "↑ 16.7%", "✦")}${stat("Monitored", isFind ? "92%" : "97%", isFind ? "of all findings" : "of all assets", "✓")}</div><section class="panel table-panel"><div class="page-toolbar"><input class="filter-input" id="table-filter" placeholder="⌕  Filter ${isFind ? "findings" : "assets"}..."><button class="button secondary small">${dropdown("All types")}</button><button class="button secondary small">${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export">Export CSV</button></div><div class="results-info">${isFind ? "38 findings" : "248 assets"} found · Updated just now</div><div class="table-wrap"><table><thead><tr><th>${isFind ? "Finding" : "Asset"}</th><th>${isFind ? "Affected asset" : "IP address"}</th><th>${isFind ? "Category" : "Open ports"}</th><th>${isFind ? "Detected" : "Technologies"}</th><th>Risk</th><th>Status</th></tr></thead><tbody id="data-rows">${rows}</tbody></table></div></section></div>`;
 }
+// dropdown builds the label and icon used by a menu control.
 function dropdown(label) {
   return `<span class="dropdown-label">${label}</span><span class="dropdown-icon" aria-hidden="true"></span>`;
 }
+// setupScanPanel adds the scan controls and loads results from the API.
 function setupScanPanel() {
   if (
     document.body.dataset.page !== "overview" ||
@@ -229,6 +242,7 @@ function setupScanPanel() {
   const resultsBody = panel.querySelector("#zmap-scan-results");
   const button = panel.querySelector("#start-zmap-scan");
   let pollTimer;
+  // Escape API text before placing it in the results table.
   const escapeHtml = (value) =>
     String(value).replace(
       /[&<>"']/g,
@@ -241,6 +255,7 @@ function setupScanPanel() {
           "'": "&#39;",
         })[character],
     );
+  // Update the scan status and table with data from the API.
   const renderResults = (data) => {
     if (data.error) {
       status.textContent = "Scan failed.";
@@ -265,6 +280,7 @@ function setupScanPanel() {
       : '<tr><td colspan="5" class="muted-link">No open ports reported.</td></tr>';
     pollTimer = setTimeout(loadResults, data.running ? 2000 : 5000);
   };
+  // Request the latest scan results and show an error if loading fails.
   const loadResults = () =>
     fetch("/api/results")
       .then((response) => response.json())
@@ -275,6 +291,7 @@ function setupScanPanel() {
         errorBox.style.display = "block";
         button.disabled = false;
       });
+  // Start a scan when the user presses the scan button.
   button.onclick = () => {
     button.disabled = true;
     status.textContent = "Starting scan...";
@@ -300,12 +317,15 @@ function setupScanPanel() {
     once: true,
   });
 }
+// searchView builds the search page and keeps the current query in the field.
 function searchView(query = "") {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Discovery</span><h1>Global search</h1><p class="subtitle">Search across every asset, service, and finding in your workspace.</p></div></div><section class="panel" style="margin-bottom:18px"><div class="search-box" style="border:1px solid var(--line);max-width:none"><input id="global-search" value="${query}" placeholder="Search domains, IPs, technologies, CVEs..."><select id="global-search-limit" class="search-limit" title="Results limit"><option value="10">10 results</option><option value="25">25 results</option><option value="50" selected>50 results</option><option value="100">100 results</option><option value="250">250 results</option><option value="500">500 results</option></select><button class="button" data-search>Search</button></div><div class="quick-searches" style="margin-top:12px"><span data-query="domain:acme.com">domain:acme.com</span><span data-query="type:ip">type:ip</span><span data-query="severity:critical">severity:critical</span></div></section><section class="panel table-panel"><div class="panel-header"><span class="panel-title">${query ? "Results for “" + query + "”" : "All indexed assets"}</span><span class="muted-link">248 results · Save search</span></div><div class="page-toolbar"><button class="button secondary small">${dropdown("All results")}</button><button class="button secondary small">${dropdown("Asset type")}</button><button class="button secondary small">${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export">Export</button></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody>${assetRows()}</tbody></table></div></section></div>`;
 }
+// simplePage builds a page with a heading and supplied page content.
 function simplePage(title, subtitle, eyebrow, body) {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${eyebrow}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div><button class="button" data-action="create">+ Create new</button></div>${body}</div>`;
 }
+// render chooses a page, puts it on screen and connects its controls.
 function render(view, extra = "") {
   let html =
     view === "asset-detail"
@@ -369,6 +389,7 @@ function render(view, extra = "") {
     );
   bind();
 }
+// bind connects buttons, links and filters on the page to their actions.
 function bind() {
   const currentView = document.body.dataset.page || "overview";
   const pagePrefix = window.location.pathname.includes("/pages/")
@@ -469,6 +490,7 @@ sidebarToggle.onclick = () =>
       ? openSidebar()
       : closeSidebar();
 sidebarBackdrop.onclick = closeSidebar;
+// Show the scroll button after the page moves down.
 window.addEventListener("scroll", () => {
   scrollToTopButton.classList.toggle("visible", window.scrollY > 80);
 });
@@ -483,6 +505,7 @@ else render(document.body.dataset.page || "overview");
 setupOverviewDetails();
 setupScanPanel();
 requestAnimationFrame(() => setTimeout(hidePageLoader, 180));
+// Open the selected asset when the address hash changes.
 window.addEventListener("hashchange", () => {
   if (window.location.hash.startsWith("#asset/"))
     render(
