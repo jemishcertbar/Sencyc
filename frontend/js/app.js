@@ -24,14 +24,17 @@ pageLoader.setAttribute("aria-live", "polite");
 pageLoader.innerHTML =
   '<div class="loader-core"><span class="loader-ring"></span><span>Loading</span></div>';
 document.body.appendChild(pageLoader);
+// Show the loading cover while the next page is opening.
 function showPageLoader() {
   pageLoader.classList.add("visible");
 }
+// Hide the loading cover and clear the saved loading flag.
 function hidePageLoader() {
   pageLoader.classList.remove("visible");
   sessionStorage.removeItem("sencyc-page-loading");
 }
 if (sessionStorage.getItem("sencyc-page-loading") === "true") showPageLoader();
+// Keep the sidebar buttons and screen reader labels in sync with the sidebar.
 function updateSidebarToggleState() {
   const isOpen = sidebar && sidebar.classList.contains("open");
   if (sidebarToggle) {
@@ -77,6 +80,7 @@ function setTheme(theme) {
     themeToggle.innerHTML = `<span class="theme-icon">${dark ? "☀" : "☾"}</span><span class="theme-label">${dark ? "Light mode" : "Dark mode"}</span>`;
   }
 }
+// Add the show-more control to the overview dashboard.
 function setupOverviewDetails() {
   if (document.body.dataset.page !== "overview") return;
   const dashboard = document.querySelector(".dashboard-grid");
