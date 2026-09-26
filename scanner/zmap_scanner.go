@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -10,86 +9,42 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 )
 
 var scanPorts = []int{80, 22, 443}
 
-type ScanResult struct {
-	IP           string    `json:"ip"`
-	Port         int       `json:"port"`
-	Protocol     string    `json:"protocol"`
-	State        string    `json:"state"`
-	DiscoveredAt time.Time `json:"discoveredAt"`
-}
-
-type ScanSnapshot struct {
-	Results  []ScanResult `json:"results"`
-	Running  bool         `json:"running"`
-	LastScan *time.Time   `json:"lastScan,omitempty"`
-	Error    string       `json:"error,omitempty"`
-}
-
 type ZMapScanner struct {
 	allowlist string
 	useSudo   bool
-
-	mu       sync.RWMutex
-	results  []ScanResult
-	running  bool
-	lastScan *time.Time
-	err      error
 }
 
 func NewZMapScanner(allowlist string, useSudo bool) *ZMapScanner {
 	return &ZMapScanner{allowlist: allowlist, useSudo: useSudo}
 }
 
-func (s *ZMapScanner) Snapshot() ScanSnapshot {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	results := append([]ScanResult(nil), s.results...)
-	if results == nil {
-		results = []ScanResult{}
-	}
-	var scanError string
-	if s.err != nil {
-		scanError = s.err.Error()
-	}
-	return ScanSnapshot{Results: results, Running: s.running, LastScan: s.lastScan, Error: scanError}
-}
-
-func (s *ZMapScanner) Start(ctx context.Context) error {
+func (s *ZMapScanner) Scan(ctx context.Context) error {
 	if err := validateAllowlist(s.allowlist); err != nil {
 		return err
 	}
-
-	s.mu.Lock()
-	if s.running {
-		s.mu.Unlock()
-		return errors.New("a scan is already running")
+	results, err := s.scan(ctx)
+	if err != nil {
+		return err
 	}
-	s.running = true
-	s.err = nil
-	s.results = nil
-	s.mu.Unlock()
-
-	go s.run(ctx)
+	if len(results) == 0 {
+		fmt.Println("No open ports found.")
+		return nil
+	}
+	for _, result := range results {
+		fmt.Printf("%s:%d/%s %s\n", result.IP, result.Port, result.Protocol, result.State)
+	}
 	return nil
 }
 
-func (s *ZMapScanner) run(ctx context.Context) {
-	results, err := s.scan(ctx)
-	now := time.Now().UTC()
-
-	s.mu.Lock()
-	s.results = results
-	s.running = false
-	s.lastScan = &now
-	s.err = err
-	s.mu.Unlock()
+type ScanResult struct {
+	IP       string
+	Port     int
+	Protocol string
+	State    string
 }
 
 func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
@@ -123,7 +78,7 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 			continue
 		}
 		seen[key] = true
-		results = append(results, ScanResult{IP: ip, Port: port, Protocol: "TCP", State: "open", DiscoveredAt: time.Now().UTC()})
+		results = append(results, ScanResult{IP: ip, Port: port, Protocol: "TCP", State: "open"})
 	}
 	return results, nil
 }
@@ -184,22 +139,4 @@ func validateAllowlist(path string) error {
 		return errors.New("allowlist must be a regular file")
 	}
 	return nil
-}
-
-func loadAllowlist(path string) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var entries []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line != "" && !strings.HasPrefix(line, "#") {
-			entries = append(entries, line)
-		}
-	}
-	return entries, scanner.Err()
 }
