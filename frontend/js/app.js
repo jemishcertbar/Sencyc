@@ -168,17 +168,19 @@ function assetRows(list = assets) {
     .join("");
 }
 // assetDetail builds the detail page for one asset.
-function assetDetail(name) {
-  return `<div class="page asset-detail-page"><div class="detail-back"><a href="assets.html">← Back to assets</a></div><section class="panel empty"><strong>No asset data</strong>Asset details will appear when scan results are stored.</section></div>`;
+function assetDetail(ip) {
+  const safeIP = escapeSearchHtml(ip);
+  const searchHref = window.location.pathname.includes("/pages/") ? "search.html" : "pages/search.html";
+  return `<div class="page asset-detail-page" id="host-detail" data-ip="${safeIP}"><div class="detail-back"><a href="${searchHref}">← Back to search</a></div><div class="page-heading"><div><span class="eyebrow">Host history</span><h1>${safeIP}</h1><p class="subtitle">Port observations stored in scan_results.</p></div></div><div class="stats-grid" id="host-stats"><div class="stat-card"><div class="stat-top"><span>Distinct open ports</span></div><div class="stat-value">Loading…</div></div><div class="stat-card"><div class="stat-top"><span>Observation records</span></div><div class="stat-value">—</div></div></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Open services by port</span></div><div class="results-info" id="host-history-status">Loading database rows…</div><div class="table-wrap"><table><thead><tr><th>Port</th><th>Protocol</th><th>State</th><th>scanned_at</th></tr></thead><tbody id="host-history"><tr><td colspan="4" class="muted-link">Loading…</td></tr></tbody></table></div></section></div>`;
 }
 // overview builds the main dashboard page.
 function overview() {
-  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Security overview</span><h1>Security overview</h1><p class="subtitle">Your attack surface overview.</p></div></div><section class="search-hero"><span class="eyebrow">Asset discovery</span><h2>Search your attack surface</h2><p>Search scan history by IP address or port.</p><div class="search-box"><input id="hero-search" placeholder="Enter an IP address or port"><select id="hero-search-limit" class="search-limit" title="Results limit"><option value="50">50 results</option><option value="100">100 results</option><option value="500">500 results</option></select><button class="button" data-search>Search</button></div></section><div class="stats-grid inventory-stats">${stat("Hosts", "—", "No data", "◈")}${stat("Open ports", "—", "No data", "⌁")}${stat("Certificates", "—", "No data", "◇")}${stat("Technologies", "—", "No data", "▦")}${stat("Domains", "—", "No data", "◎")}${stat("Findings", "—", "No data", "△")}</div><div class="dashboard-grid"><section class="panel"><div class="panel-header"><span class="panel-title">Asset discovery</span><span class="muted-link">No scan data</span></div>${discoveryChart()}</section><section class="panel"><div class="panel-header"><span class="panel-title">Recent activity</span></div><div class="panel empty">Scan activity will appear here when available.</div></section></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Recently discovered assets</span><span class="muted-link" data-view-link="assets">View all assets →</span></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
+  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Security overview</span><h1>Security overview</h1><p class="subtitle">Your attack surface overview.</p></div></div><section class="search-hero"><span class="eyebrow">Asset discovery</span><h2>Search your attack surface</h2><p>Search scan history by IP address or port.</p><div class="search-box"><input id="hero-search" placeholder="Enter an IP address or port"><select id="hero-search-limit" class="search-limit" title="Results limit"><option value="50">50 results</option><option value="100">100 results</option><option value="500">500 results</option></select><button class="button" data-search>Search</button></div></section><div class="stats-grid inventory-stats">${stat("Unique hosts", "—", "From scan history", "◈")}${stat("Open services", "—", "Unique IP and port pairs", "⌁")}${stat("Ports observed", "—", "Distinct database ports", "◇")}${stat("History records", "—", "All observations", "▦")}${stat("Updated today", "—", "Observations today", "◎")}${stat("Latest observation", "—", "From PostgreSQL", "△")}</div><div class="dashboard-grid"><section class="panel"><div class="panel-header"><span class="panel-title">Asset discovery</span><span class="muted-link">No scan data</span></div>${discoveryChart()}</section><section class="panel"><div class="panel-header"><span class="panel-title">Recent activity</span></div><div class="panel empty">Scan activity will appear here when available.</div></section></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Recently discovered assets</span><span class="muted-link" data-view-link="assets">View all assets →</span></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Protocol</th><th>History records</th><th>Latest scanned_at</th></tr></thead><tbody><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
 }
 // listView builds either the asset table or the findings table.
-function listView(title, subtitle, kind) {
+function listView(title, subtitle, eyebrow, kind) {
   const isFind = kind === "findings";
-  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${isFind ? "Risk management" : "Asset inventory"}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div></div><div class="stats-grid">${stat(isFind ? "Open findings" : "Total assets", "—", "No data", "◈")}${stat("Critical", "—", "No data", "△")}${stat(isFind ? "Resolved this month" : "New this week", "—", "No data", "✦")}${stat("Monitored", "—", "No data", "✓")}</div><section class="panel table-panel"><div class="page-toolbar"><input class="filter-input" id="table-filter" placeholder="⌕  Filter ${isFind ? "findings" : "assets"}..." disabled><button class="button secondary small" disabled>${dropdown("All types")}</button><button class="button secondary small" disabled>${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export" disabled>Export CSV</button></div><div class="results-info">No scan results available.</div><div class="table-wrap"><table><thead><tr><th>${isFind ? "Finding" : "Asset"}</th><th>${isFind ? "Affected asset" : "IP address"}</th><th>${isFind ? "Category" : "Open ports"}</th><th>${isFind ? "Detected" : "Technologies"}</th><th>Risk</th><th>Status</th></tr></thead><tbody id="data-rows"><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
+  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${isFind ? "Risk management" : "Asset inventory"}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div></div><div class="stats-grid">${stat(isFind ? "Open findings" : "Total assets", "—", "No data", "◈")}${stat("Critical", "—", "No data", "△")}${stat(isFind ? "Resolved this month" : "New this week", "—", "No data", "✦")}${stat("Monitored", "—", "No data", "✓")}</div><section class="panel table-panel"><div class="page-toolbar"><input class="filter-input" id="table-filter" placeholder="⌕  Filter ${isFind ? "findings" : "assets"}..." disabled><button class="button secondary small" disabled>${dropdown("All types")}</button><button class="button secondary small" disabled>${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export" disabled>Export CSV</button></div><div class="results-info">No scan results available.</div><div class="table-wrap"><table><thead><tr><th>${isFind ? "Finding" : "Asset"}</th><th>${isFind ? "Affected asset" : "IP address"}</th><th>${isFind ? "Category" : "Open ports"}</th><th>${isFind ? "Detected" : "Protocol"}</th><th>${isFind ? "Risk" : "History records"}</th><th>${isFind ? "Status" : "Last updated"}</th></tr></thead><tbody id="data-rows"><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
 }
 // dropdown builds the label and icon used by a menu control.
 function dropdown(label) {
@@ -204,7 +206,7 @@ async function searchDatabase(query, limit) {
   if (!status || !body) return;
   status.textContent = `Searching PostgreSQL for “${query}”…`;
   body.innerHTML =
-    '<tr><td colspan="5" class="muted-link">Loading matching scan records…</td></tr>';
+    '<tr><td colspan="3" class="muted-link">Loading matching scan records…</td></tr>';
   try {
     const params = new URLSearchParams({ q: query, limit: String(limit) });
     const response = await fetch(`${DATA_API}/search?${params}`);
@@ -212,26 +214,76 @@ async function searchDatabase(query, limit) {
     if (!response.ok)
       throw new Error(data.detail || `API error ${response.status}`);
     status.textContent = data.length
-      ? `${data.length} matching scan record${data.length === 1 ? "" : "s"} for “${query}”`
-      : `No scan records matched “${query}”.`;
+      ? `${data.length} unique IP${data.length === 1 ? "" : "s"} matched “${query}”`
+      : `No IPs matched “${query}”.`;
     body.innerHTML = data.length
-      ? data
-          .map(
-            (row) =>
-              `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`,
-          )
-          .join("")
-      : '<tr><td colspan="5" class="muted-link">No matching database records.</td></tr>';
+      ? data.map((host) => `<tr><td><a class="asset-link" href="#asset/${encodeURIComponent(host.ip)}" data-open="${escapeSearchHtml(host.ip)}">${escapeSearchHtml(host.ip)}</a></td><td>${host.ports.map((port) => `<span class="pill active">${port}</span>`).join(" ")}</td><td>${host.observations}</td></tr>`).join("")
+      : '<tr><td colspan="3" class="muted-link">No matching database records.</td></tr>';
   } catch (error) {
     status.textContent = "Could not load search results.";
-    body.innerHTML = `<tr><td colspan="5" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="3" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
+  }
+}
+async function loadHostDetails(ip) {
+  const body = document.getElementById("host-history");
+  const status = document.getElementById("host-history-status");
+  if (!body || !status) return;
+  try {
+    const response = await fetch(`${DATA_API}/hosts/${encodeURIComponent(ip)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || `API error ${response.status}`);
+    const values = [data.ports.join(", "), data.observations];
+    document.querySelectorAll("#host-stats .stat-value").forEach((node, index) => { node.textContent = values[index] ?? "—"; });
+    status.textContent = `${data.history.length} rows from scan_results · timestamps use the scanned_at column`;
+    body.innerHTML = data.history.length ? data.history.map((row) => `<tr><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`).join("") : '<tr><td colspan="4" class="muted-link">No scan rows found for this IP.</td></tr>';
+  } catch (error) {
+    status.textContent = `Unable to load host details: ${error.message}`;
+    body.innerHTML = '<tr><td colspan="4" class="muted-link">Could not load this host history.</td></tr>';
+  }
+}
+async function loadAssetList() {
+  try {
+    const response = await fetch(`${DATA_API}/assets?limit=500`);
+    if (!response.ok) throw new Error("Could not load hosts");
+    const data = await response.json();
+    const body = document.getElementById("data-rows");
+    if (body) body.innerHTML = data.length ? data.map((host) => `<tr><td><a class="asset-link" href="#asset/${encodeURIComponent(host.ip)}" data-open="${escapeSearchHtml(host.ip)}">${escapeSearchHtml(host.ip)}</a></td><td>${escapeSearchHtml(host.ip)}</td><td>${host.ports.join(", ")}</td><td>TCP</td><td>${host.observations}</td><td>${escapeSearchHtml(formatSearchDate(host.latest_scanned_at))}</td></tr>`).join("") : '<tr><td colspan="6" class="muted-link">No scan observations in the database.</td></tr>';
+    const info = document.querySelector(".results-info");
+    if (info) info.textContent = `${data.length} unique hosts`;
+  } catch (error) {
+    const info = document.querySelector(".results-info");
+    if (info) info.textContent = `Unable to load assets: ${error.message}`;
+  }
+}
+async function loadDashboardData() {
+  try {
+    const [summaryResponse, assetsResponse] = await Promise.all([fetch(`${DATA_API}/summary`), fetch(`${DATA_API}/assets?limit=8`)]);
+    if (!summaryResponse.ok || !assetsResponse.ok) throw new Error("Could not load PostgreSQL dashboard data");
+    const summary = await summaryResponse.json();
+    const hosts = await assetsResponse.json();
+    if (window.sencycCurrentView !== "overview") return;
+    const values = [summary.hosts, summary.open_services, summary.ports_observed, summary.observations, summary.observations_today, formatSearchDate(summary.latest_scanned_at)];
+    document.querySelectorAll(".inventory-stats .stat-value").forEach((node, index) => { node.textContent = values[index] ?? "—"; });
+    const trends = document.querySelectorAll(".inventory-stats .trend");
+    if (trends[2]) trends[2].textContent = summary.port_list.length ? `Ports ${summary.port_list.join(", ")}` : "No ports observed";
+    const chartSummary = document.querySelector(".chart-summary b");
+    if (chartSummary) chartSummary.textContent = summary.hosts;
+    const chartChange = document.querySelector(".chart-change");
+    if (chartChange) chartChange.textContent = `${summary.ports_observed} distinct ports observed`;
+    const activity = document.querySelector(".dashboard-grid .panel.empty");
+    if (activity) activity.textContent = `Latest database observation: ${formatSearchDate(summary.latest_scanned_at)} · ${summary.observations_today} observations today.`;
+    const body = document.querySelector(".table-panel tbody");
+    if (body) body.innerHTML = hosts.length ? hosts.map((host) => `<tr><td><a class="asset-link" href="#asset/${encodeURIComponent(host.ip)}" data-open="${escapeSearchHtml(host.ip)}"><div class="asset-name">${escapeSearchHtml(host.ip)}</div></a><div class="asset-type">Host</div></td><td>${escapeSearchHtml(host.ip)}</td><td>${host.ports.join(", ")}</td><td>TCP</td><td>${host.observations}</td><td>${escapeSearchHtml(formatSearchDate(host.latest_scanned_at))}</td></tr>`).join("") : '<tr><td colspan="6" class="muted-link">No scan observations in the database.</td></tr>';
+  } catch (error) {
+    const activity = document.querySelector(".dashboard-grid .panel.empty");
+    if (activity) activity.textContent = `Unable to load dashboard data: ${error.message}`;
   }
 }
 function searchView(query = "") {
   const initialQuery =
     query || new URLSearchParams(window.location.search).get("query") || "";
   const safeQuery = escapeSearchHtml(initialQuery);
-  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Discovery</span><h1>Global search</h1><p class="subtitle">Search scan history by IP address or port.</p></div></div><section class="panel" style="margin-bottom:18px"><div class="search-box" style="border:1px solid var(--line);max-width:none"><input id="global-search" value="${safeQuery}" placeholder="Enter an IP address or port"><select id="global-search-limit" class="search-limit" title="Results limit"><option value="10">10 results</option><option value="25">25 results</option><option value="50" selected>50 results</option><option value="100">100 results</option><option value="250">250 results</option><option value="500">500 results</option></select><button class="button" data-search type="button">Search</button></div></section><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Database search results</span></div><div class="results-info" id="search-result-status">${initialQuery ? "Loading search results…" : "Enter an IP address or port, then click Search."}</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="search-results"><tr><td colspan="5" class="muted-link">No search submitted yet.</td></tr></tbody></table></div></section></div>`;
+  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Discovery</span><h1>Global search</h1><p class="subtitle">Search scan history by IP address or port.</p></div></div><section class="panel" style="margin-bottom:18px"><div class="search-box" style="border:1px solid var(--line);max-width:none"><input id="global-search" value="${safeQuery}" placeholder="Enter an IP address or port"><select id="global-search-limit" class="search-limit" title="Results limit"><option value="10">10 results</option><option value="25">25 results</option><option value="50" selected>50 results</option><option value="100">100 results</option><option value="250">250 results</option><option value="500">500 results</option></select><button class="button" data-search type="button">Search</button></div></section><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Database search results</span></div><div class="results-info" id="search-result-status">${initialQuery ? "Loading search results…" : "Enter an IP address or port, then click Search."}</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Open ports</th><th>Observation records</th></tr></thead><tbody id="search-results"><tr><td colspan="3" class="muted-link">No search submitted yet.</td></tr></tbody></table></div></section></div>`;
 }
 // simplePage builds a page with a heading and supplied page content.
 function simplePage(title, subtitle, eyebrow, body) {
@@ -289,6 +341,7 @@ function render(view, extra = "") {
                           `<section class="panel empty"><strong>No integrations configured</strong></section>`,
                         )
                       : `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>Settings</h1><p class="subtitle">Manage your profile, workspace, and notification preferences.</p></div></div><div class="settings-layout"><section class="panel settings-menu"><button class="active">Profile</button><button>Workspace</button><button>Notifications</button><button>Security</button><button>API keys</button><button>Audit log</button></section><section class="panel"><div class="panel-header"><span class="panel-title">Profile information</span><button class="button small" data-action="save">Save changes</button></div><div class="form-row"><div class="form-group"><label>First name</label><input value=""></div><div class="form-group"><label>Last name</label><input value=""></div></div><div class="form-group"><label>Email address</label><input value=""></div><div class="form-group"><label>Role</label><input value="" disabled></div></section></div></div>`;
+  window.sencycCurrentView = view;
   root.innerHTML = html;
   breadcrumb.textContent =
     view === "asset-detail"
@@ -300,6 +353,16 @@ function render(view, extra = "") {
       item.classList.toggle("active", item.dataset.view === view),
     );
   bind();
+  window.clearInterval(window.sencycDashboardRefresh);
+  window.clearInterval(window.sencycHostRefresh);
+  if (view === "overview") {
+    loadDashboardData();
+    window.sencycDashboardRefresh = window.setInterval(loadDashboardData, 15000);
+  } else if (view === "asset-detail") {
+    loadHostDetails(extra);
+    window.sencycHostRefresh = window.setInterval(() => loadHostDetails(extra), 15000);
+  }
+  if (view === "assets") loadAssetList();
 }
 // bind connects buttons, links and filters on the page to their actions.
 function bind() {
@@ -363,14 +426,6 @@ function bind() {
     const initialQuery = params.get("query");
     if (initialQuery) searchDatabase(initialQuery, params.get("limit") || "50");
   }
-  document.querySelectorAll("[data-open]").forEach(
-    (e) =>
-      (e.onclick = (event) => {
-        event.preventDefault();
-        window.location.hash = `asset/${encodeURIComponent(e.dataset.open)}`;
-        render("asset-detail", e.dataset.open);
-      }),
-  );
   const filter = document.getElementById("table-filter");
   if (filter)
     filter.oninput = () => {
@@ -385,6 +440,15 @@ function bind() {
         );
     };
 }
+root.addEventListener("click", (event) => {
+  const link = event.target.closest("[data-open]");
+  if (!link) return;
+  event.preventDefault();
+  const ip = link.dataset.open;
+  const targetHash = `#asset/${encodeURIComponent(ip)}`;
+  if (window.location.hash === targetHash) render("asset-detail", ip);
+  else window.location.hash = targetHash;
+});
 document.querySelectorAll(".nav-item").forEach((item) =>
   item.addEventListener("click", () => {
     sessionStorage.setItem("sencyc-page-loading", "true");

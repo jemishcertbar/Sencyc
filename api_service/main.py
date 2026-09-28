@@ -1,3 +1,4 @@
+import ipaddress
 import os
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,8 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT_DIR / ".env")
 
 app = FastAPI(title="Sencyc Data API", version="1.0.0")
+
+
 def get_connection() -> psycopg.Connection[Any]:
     keys = ("POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB")
     missing = [key for key in keys if not os.getenv(key)]
@@ -39,16 +42,62 @@ def health() -> dict[str, str]:
         raise HTTPException(status_code=503, detail="Database connection failed") from exc
 
 
+@app.get("/api/summary")
+def summary() -> dict[str, Any]:
+    query = """
+        SELECT COUNT(DISTINCT ip)::int AS hosts,
+               COUNT(DISTINCT (ip, port))::int AS open_services,
+               COUNT(DISTINCT port)::int AS ports_observed,
+               COALESCE(ARRAY_AGG(DISTINCT port ORDER BY port), ARRAY[]::int[]) AS port_list,
+               COUNT(*)::int AS observations,
+               COUNT(*) FILTER (WHERE scanned_at >= CURRENT_DATE)::int AS observations_today,
+               MAX(scanned_at) AS latest_scanned_at
+        FROM scan_results
+    """
+    try:
+        with get_connection() as connection:
+            return connection.execute(query).fetchone()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not load dashboard data from PostgreSQL") from exc
+
+
+@app.get("/api/assets")
+def assets(limit: int = Query(default=100, ge=1, le=500)) -> list[dict[str, Any]]:
+    query = """
+        SELECT host(ip) AS ip,
+               ARRAY_AGG(DISTINCT port ORDER BY port) AS ports,
+               COUNT(*)::int AS observations,
+               MAX(scanned_at) AS latest_scanned_at
+        FROM scan_results
+        GROUP BY ip
+        ORDER BY latest_scanned_at DESC
+        LIMIT %s
+    """
+    try:
+        with get_connection() as connection:
+            return connection.execute(query, (limit,)).fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not load hosts from PostgreSQL") from exc
+
+
 @app.get("/api/search")
 def search(
     q: str = Query(min_length=1, max_length=200),
     limit: int = Query(default=50, ge=1, le=500),
 ) -> list[dict[str, Any]]:
     query = """
-        SELECT id, ip::text AS ip, port, protocol, state, scanned_at
-        FROM scan_results
-        WHERE ip::text ILIKE %s OR port::text ILIKE %s
-        ORDER BY scanned_at DESC, id DESC
+        WITH matched_hosts AS (
+            SELECT DISTINCT ip FROM scan_results WHERE host(ip) ILIKE %s
+            UNION
+            SELECT DISTINCT ip FROM scan_results WHERE port::text ILIKE %s
+        )
+        SELECT host(history.ip) AS ip,
+               ARRAY_AGG(DISTINCT history.port ORDER BY history.port) AS ports,
+               COUNT(*)::int AS observations
+        FROM scan_results AS history
+        INNER JOIN matched_hosts USING (ip)
+        GROUP BY history.ip
+        ORDER BY MAX(history.scanned_at) DESC
         LIMIT %s
     """
     pattern = f"%{q.strip()}%"
@@ -57,6 +106,35 @@ def search(
             return connection.execute(query, (pattern, pattern, limit)).fetchall()
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Could not read search data from PostgreSQL") from exc
+
+
+@app.get("/api/hosts/{ip}")
+def host_details(ip: str) -> dict[str, Any]:
+    try:
+        address = str(ipaddress.ip_interface(ip).ip if "/" in ip else ipaddress.ip_address(ip))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid IP address") from exc
+    query = """
+        SELECT id, host(ip) AS ip, port, protocol, state, scanned_at
+        FROM scan_results
+        WHERE host(ip) = %s
+        ORDER BY scanned_at DESC, id DESC
+    """
+    try:
+        with get_connection() as connection:
+            history = connection.execute(query, (address,)).fetchall()
+        if not history:
+            raise HTTPException(status_code=404, detail="Host not found")
+        return {
+            "ip": address,
+            "ports": sorted({row["port"] for row in history}),
+            "observations": len(history),
+            "history": history,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not load host history from PostgreSQL") from exc
 
 
 # Serve the static frontend from the same FastAPI origin as the data API.

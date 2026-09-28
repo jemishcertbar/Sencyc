@@ -29,4 +29,4 @@ pip install -r requirements.txt
 uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. Click Search (or press Enter) to call `GET /api/search`; matching IP/port observations are shown in the page. The frontend uses the same-origin `/api` URL by default. Set `window.SENCYC_API_BASE` before `js/app.js` only if the API is hosted elsewhere.
+Open `http://127.0.0.1:8000`. Click Search (or press Enter) to call `GET /api/search`; results contain one row per unique IP, with its observed ports and history count. Click an IP to view each port observation and its timestamp. The dashboard loads unique hosts, unique open services, distinct ports observed, history counts, and most recent update from PostgreSQL and refreshes every 15 seconds. Since the scanner only stores successful open-port responses, these are observed ports rather than all probe attempts. The frontend uses the same-origin `/api` URL by default. Set `window.SENCYC_API_BASE` before `js/app.js` only if the API is hosted elsewhere.
