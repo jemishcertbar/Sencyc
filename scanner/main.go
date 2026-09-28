@@ -9,6 +9,7 @@ import (
 	"strconv"
 )
 
+// main starts the scanner, sets up the API and serves the web pages.
 func main() {
 	allowlist := flag.String("allowlist", "lab-allowlist.txt", "file containing authorized hosts to scan")
 	useSudo := flag.Bool("sudo", true, "run ZMap through sudo")

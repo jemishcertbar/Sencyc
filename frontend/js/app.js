@@ -52,6 +52,7 @@ function updateSidebarToggleState() {
       : "Open navigation menu";
   }
 }
+// closeSidebar hides the menu and saves its collapsed state.
 function closeSidebar() {
   sidebar.classList.add("collapsed");
   sidebar.classList.remove("open");
@@ -59,6 +60,7 @@ function closeSidebar() {
   localStorage.setItem("sencyc-sidebar-collapsed", "true");
   updateSidebarToggleState();
 }
+// openSidebar shows the menu and saves its open state.
 function openSidebar() {
   sidebar.classList.remove("collapsed");
   sidebar.classList.add("open");
@@ -66,6 +68,7 @@ function openSidebar() {
   if (window.innerWidth <= 900) sidebarBackdrop.classList.add("visible");
   updateSidebarToggleState();
 }
+// setTheme applies the selected color theme and saves it for the next visit.
 function setTheme(theme) {
   const dark = theme === "dark";
   document.documentElement.dataset.theme = theme;
@@ -112,6 +115,7 @@ themeToggle.onclick = () =>
   setTheme(
     document.documentElement.dataset.theme === "dark" ? "light" : "dark",
   );
+// setupMobileToggle connects the mobile menu button to the sidebar.
 function setupMobileToggle() {
   const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
   if (!mobileSidebarToggle) return;
@@ -140,17 +144,21 @@ if (sidebarToggle) {
         : closeSidebar();
 }
 updateSidebarToggleState();
+// notify shows a short message at the bottom of the page.
 function notify(message) {
   toast.textContent = message;
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 2500);
 }
+// stat builds the HTML for one dashboard number card.
 function stat(label, value, trend, icon, down = false) {
   return `<div class="stat-card"><div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div><div class="stat-value">${value}</div><span class="trend ${down ? "down" : ""}">${trend}</span></div>`;
 }
+// discoveryChart builds the chart from the saved discovery data.
 function discoveryChart() {
   return `<div class="chart-summary"><span><b>—</b> assets discovered</span><span class="chart-change">No scan data</span></div><div class="chart-shell"><div class="chart-y-axis"><span>—</span><span>—</span><span>—</span><span>—</span><span>0</span></div><div class="chart-area"><div class="chart"></div><div class="chart-labels"></div></div></div><div class="chart-legend"><span><i class="legend-dot"></i>Scan results will appear here when available</span></div>`;
 }
+// assetRows builds table rows for the given list of assets.
 function assetRows(list = assets) {
   return list
     .map(
@@ -159,25 +167,129 @@ function assetRows(list = assets) {
     )
     .join("");
 }
+// assetDetail builds the detail page for one asset.
 function assetDetail(name) {
   return `<div class="page asset-detail-page"><div class="detail-back"><a href="assets.html">← Back to assets</a></div><section class="panel empty"><strong>No asset data</strong>Asset details will appear when scan results are stored.</section></div>`;
 }
+// overview builds the main dashboard page.
 function overview() {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Security overview</span><h1>Security overview</h1><p class="subtitle">Your attack surface overview.</p></div></div><section class="search-hero"><span class="eyebrow">Asset discovery</span><h2>Search your attack surface</h2><p>Search will be available when scan data is stored.</p><div class="search-box"><input id="hero-search" placeholder="Search domains, IP addresses, or technologies..." disabled><select id="hero-search-limit" class="search-limit" title="Results limit" disabled><option>Results</option></select><button class="button" data-search disabled>Search</button></div></section><div class="stats-grid inventory-stats">${stat("Hosts", "—", "No data", "◈")}${stat("Open ports", "—", "No data", "⌁")}${stat("Certificates", "—", "No data", "◇")}${stat("Technologies", "—", "No data", "▦")}${stat("Domains", "—", "No data", "◎")}${stat("Findings", "—", "No data", "△")}</div><div class="dashboard-grid"><section class="panel"><div class="panel-header"><span class="panel-title">Asset discovery</span><span class="muted-link">No scan data</span></div>${discoveryChart()}</section><section class="panel"><div class="panel-header"><span class="panel-title">Recent activity</span></div><div class="panel empty">Scan activity will appear here when available.</div></section></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Recently discovered assets</span><span class="muted-link" data-view-link="assets">View all assets →</span></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
 }
+// listView builds either the asset table or the findings table.
 function listView(title, subtitle, kind) {
   const isFind = kind === "findings";
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${isFind ? "Risk management" : "Asset inventory"}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div></div><div class="stats-grid">${stat(isFind ? "Open findings" : "Total assets", "—", "No data", "◈")}${stat("Critical", "—", "No data", "△")}${stat(isFind ? "Resolved this month" : "New this week", "—", "No data", "✦")}${stat("Monitored", "—", "No data", "✓")}</div><section class="panel table-panel"><div class="page-toolbar"><input class="filter-input" id="table-filter" placeholder="⌕  Filter ${isFind ? "findings" : "assets"}..." disabled><button class="button secondary small" disabled>${dropdown("All types")}</button><button class="button secondary small" disabled>${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export" disabled>Export CSV</button></div><div class="results-info">No scan results available.</div><div class="table-wrap"><table><thead><tr><th>${isFind ? "Finding" : "Asset"}</th><th>${isFind ? "Affected asset" : "IP address"}</th><th>${isFind ? "Category" : "Open ports"}</th><th>${isFind ? "Detected" : "Technologies"}</th><th>Risk</th><th>Status</th></tr></thead><tbody id="data-rows"><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
 }
+// dropdown builds the label and icon used by a menu control.
 function dropdown(label) {
   return `<span class="dropdown-label">${label}</span><span class="dropdown-icon" aria-hidden="true"></span>`;
 }
+// setupScanPanel adds the scan controls and loads results from the API.
+function setupScanPanel() {
+  if (
+    document.body.dataset.page !== "overview" ||
+    document.getElementById("zmap-scan-panel")
+  )
+    return;
+  const page = root.querySelector(".page");
+  if (!page) return;
+  const panel = document.createElement("section");
+  panel.id = "zmap-scan-panel";
+  panel.className = "panel";
+  panel.style.marginTop = "18px";
+  panel.innerHTML =
+    '<div class="panel-header"><div><span class="panel-title">ZMap port scan</span><div class="muted-link">Authorized allowlist · TCP 80, 22, 443 · Auto scan every minute</div></div><button class="button small" id="start-zmap-scan" type="button">Start scan</button></div><div class="results-info" id="zmap-scan-status">No scan run yet.</div><div id="zmap-scan-error" style="display: none; padding: 12px; margin: 0 16px 16px 16px; background-color: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.2); border-radius: 6px; font-family: monospace; white-space: pre-wrap;"></div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Discovered</th></tr></thead><tbody id="zmap-scan-results"><tr><td colspan="5" class="muted-link">Results from the next scan will appear here.</td></tr></tbody></table></div>';
+  page.appendChild(panel);
+
+  const status = panel.querySelector("#zmap-scan-status");
+  const errorBox = panel.querySelector("#zmap-scan-error");
+  const resultsBody = panel.querySelector("#zmap-scan-results");
+  const button = panel.querySelector("#start-zmap-scan");
+  let pollTimer;
+  // Escape API text before placing it in the results table.
+  const escapeHtml = (value) =>
+    String(value).replace(
+      /[&<>"']/g,
+      (character) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[character],
+    );
+  // Update the scan status and table with data from the API.
+  const renderResults = (data) => {
+    if (data.error) {
+      status.textContent = "Scan failed.";
+      errorBox.textContent = `Error: ${data.error}`;
+      errorBox.style.display = "block";
+    } else {
+      errorBox.style.display = "none";
+      if (data.running)
+        status.textContent = "Scan running... waiting for ZMap results.";
+      else
+        status.textContent = `${data.results.length} open port${data.results.length === 1 ? "" : "s"} found${data.lastScan ? ` · ${new Date(data.lastScan).toLocaleString()}` : ""}`;
+    }
+    button.disabled = data.running;
+    button.textContent = data.running ? "Scanning..." : "Start scan";
+    resultsBody.innerHTML = data.results.length
+      ? data.results
+          .map(
+            (result) =>
+              `<tr><td>${escapeHtml(result.ip)}</td><td>${result.port}</td><td>${escapeHtml(result.protocol)}</td><td><span class="pill active">${escapeHtml(result.state)}</span></td><td>${new Date(result.discoveredAt).toLocaleString()}</td></tr>`,
+          )
+          .join("")
+      : '<tr><td colspan="5" class="muted-link">No open ports reported.</td></tr>';
+    pollTimer = setTimeout(loadResults, data.running ? 2000 : 5000);
+  };
+  // Request the latest scan results and show an error if loading fails.
+  const loadResults = () =>
+    fetch("/api/results")
+      .then((response) => response.json())
+      .then(renderResults)
+      .catch((error) => {
+        status.textContent = "Unable to load scan results.";
+        errorBox.textContent = `Error: ${error.message}`;
+        errorBox.style.display = "block";
+        button.disabled = false;
+      });
+  // Start a scan when the user presses the scan button.
+  button.onclick = () => {
+    button.disabled = true;
+    status.textContent = "Starting scan...";
+    errorBox.style.display = "none";
+    fetch("/api/scan", { method: "POST" })
+      .then((response) =>
+        response.json().then((data) => ({ ok: response.ok, data })),
+      )
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.error || "Unable to start scan");
+        renderResults(data);
+      })
+      .catch((error) => {
+        status.textContent = "Unable to start scan.";
+        errorBox.textContent = `Error: ${error.message}`;
+        errorBox.style.display = "block";
+        button.disabled = false;
+        button.textContent = "Start scan";
+      });
+  };
+  loadResults();
+  window.addEventListener("beforeunload", () => clearTimeout(pollTimer), {
+    once: true,
+  });
+}
+// searchView builds the search page and keeps the current query in the field.
 function searchView(query = "") {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Discovery</span><h1>Global search</h1><p class="subtitle">Search across every asset, service, and finding in your workspace.</p></div></div><section class="panel" style="margin-bottom:18px"><div class="search-box" style="border:1px solid var(--line);max-width:none"><input id="global-search" value="${query}" placeholder="Search domains, IPs, technologies, CVEs..."><select id="global-search-limit" class="search-limit" title="Results limit"><option value="10">10 results</option><option value="25">25 results</option><option value="50" selected>50 results</option><option value="100">100 results</option><option value="250">250 results</option><option value="500">500 results</option></select><button class="button" data-search>Search</button></div><div class="quick-searches" style="margin-top:12px"></div></section><section class="panel table-panel"><div class="panel-header"><span class="panel-title">${query ? "Results for “" + query + "”" : "All indexed assets"}</span><span class="muted-link">No scan results available</span></div><div class="page-toolbar"><button class="button secondary small">${dropdown("All results")}</button><button class="button secondary small">${dropdown("Asset type")}</button><button class="button secondary small">${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export">Export</button></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
 }
+// simplePage builds a page with a heading and supplied page content.
 function simplePage(title, subtitle, eyebrow, body) {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${eyebrow}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div><button class="button" data-action="create">+ Create new</button></div>${body}</div>`;
 }
+// render chooses a page, puts it on screen and connects its controls.
 function render(view, extra = "") {
   let html =
     view === "asset-detail"
@@ -241,6 +353,7 @@ function render(view, extra = "") {
     );
   bind();
 }
+// bind connects buttons, links and filters on the page to their actions.
 function bind() {
   const currentView = document.body.dataset.page || "overview";
   const pagePrefix = window.location.pathname.includes("/pages/")
@@ -335,6 +448,7 @@ sidebarToggle.onclick = () =>
       ? openSidebar()
       : closeSidebar();
 sidebarBackdrop.onclick = closeSidebar;
+// Show the scroll button after the page moves down.
 window.addEventListener("scroll", () => {
   scrollToTopButton.classList.toggle("visible", window.scrollY > 80);
 });
@@ -348,6 +462,7 @@ if (window.location.hash.startsWith("#asset/"))
 else render(document.body.dataset.page || "overview");
 setupOverviewDetails();
 requestAnimationFrame(() => setTimeout(hidePageLoader, 180));
+// Open the selected asset when the address hash changes.
 window.addEventListener("hashchange", () => {
   if (window.location.hash.startsWith("#asset/"))
     render(
