@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -16,10 +17,11 @@ var scanPorts = []int{80, 22, 443}
 type ZMapScanner struct {
 	allowlist string
 	useSudo   bool
+	store     *PostgresStore
 }
 
-func NewZMapScanner(allowlist string, useSudo bool) *ZMapScanner {
-	return &ZMapScanner{allowlist: allowlist, useSudo: useSudo}
+func NewZMapScanner(allowlist string, useSudo bool, store *PostgresStore) *ZMapScanner {
+	return &ZMapScanner{allowlist: allowlist, useSudo: useSudo, store: store}
 }
 
 func (s *ZMapScanner) Scan(ctx context.Context) error {
@@ -34,9 +36,16 @@ func (s *ZMapScanner) Scan(ctx context.Context) error {
 		fmt.Println("No open ports found.")
 		return nil
 	}
+	if s.store == nil {
+		return errors.New("PostgreSQL store is not configured")
+	}
+	if err := s.store.SaveResults(ctx, results); err != nil {
+		return fmt.Errorf("save scan results: %w", err)
+	}
 	for _, result := range results {
 		fmt.Printf("%s:%d/%s %s\n", result.IP, result.Port, result.Protocol, result.State)
 	}
+	fmt.Printf("Stored %d scan results in PostgreSQL.\n", len(results))
 	return nil
 }
 
@@ -52,7 +61,7 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 		return nil, fmt.Errorf("allowlist: %w", err)
 	}
 
-	args := []string{"-p", portList(), "-w", s.allowlist, "-b", "/dev/null", "-O", "csv", "-f", "saddr,sport,classification,success,repeat", "--output-filter=success=1 && repeat=0", "--no-header-row"}
+	args := []string{"-p", portList(), "-w", s.allowlist, "-b", "/dev/null", "-O", "json", "-f", "saddr,sport,classification,success,repeat", "--output-filter=success=1 && repeat=0"}
 	lines, err := s.runZMap(ctx, args)
 	if err != nil {
 		return nil, fmt.Errorf("zmap ports %s: %w", portList(), err)
@@ -61,16 +70,18 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 	seen := make(map[string]bool)
 	results := make([]ScanResult, 0)
 	for _, line := range lines {
-		fields := strings.Split(strings.TrimSpace(line), ",")
-		if len(fields) != 5 {
+		var row struct {
+			IP             string `json:"saddr"`
+			Port           int    `json:"sport"`
+			Classification string `json:"classification"`
+			Success        bool   `json:"success"`
+			Repeat         bool   `json:"repeat"`
+		}
+		if json.Unmarshal([]byte(strings.TrimSpace(line)), &row) != nil {
 			continue
 		}
-		ip := strings.Trim(fields[0], "\" ")
-		port, parseErr := strconv.Atoi(strings.Trim(fields[1], "\" "))
-		classification := strings.Trim(fields[2], "\" ")
-		success := strings.Trim(fields[3], "\" ")
-		repeat := strings.Trim(fields[4], "\" ")
-		if parseErr != nil || net.ParseIP(ip) == nil || !containsPort(port) || classification != "synack" || success != "1" || repeat != "0" {
+		ip, port := row.IP, row.Port
+		if net.ParseIP(ip) == nil || !containsPort(port) || row.Classification != "synack" || !row.Success || row.Repeat {
 			continue
 		}
 		key := ip + ":" + strconv.Itoa(port)

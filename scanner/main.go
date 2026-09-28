@@ -25,7 +25,15 @@ func main() {
 		*useSudo = parsed
 	}
 
-	scanner := NewZMapScanner(*allowlist, *useSudo)
+	store, err := NewPostgresStoreFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer store.Close()
+	if err := store.EnsureSchema(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+	scanner := NewZMapScanner(*allowlist, *useSudo, store)
 	fmt.Printf("Scanning authorized hosts on TCP ports %s\n", portList())
 	if err := scanner.Scan(context.Background()); err != nil {
 		log.Fatal(err)
