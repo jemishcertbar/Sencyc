@@ -42,10 +42,12 @@ type ZMapScanner struct {
 	err      error
 }
 
+// NewZMapScanner creates a scanner with the allowlist and sudo settings.
 func NewZMapScanner(allowlist string, useSudo bool) *ZMapScanner {
 	return &ZMapScanner{allowlist: allowlist, useSudo: useSudo}
 }
 
+// Snapshot returns a safe copy of the latest scan status and results.
 func (s *ZMapScanner) Snapshot() ScanSnapshot {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -61,6 +63,7 @@ func (s *ZMapScanner) Snapshot() ScanSnapshot {
 	return ScanSnapshot{Results: results, Running: s.running, LastScan: s.lastScan, Error: scanError}
 }
 
+// Start checks the allowlist and begins a scan in the background.
 func (s *ZMapScanner) Start(ctx context.Context) error {
 	if err := validateAllowlist(s.allowlist); err != nil {
 		return err
@@ -80,6 +83,7 @@ func (s *ZMapScanner) Start(ctx context.Context) error {
 	return nil
 }
 
+// run scans the allowlist and saves the final status and results.
 func (s *ZMapScanner) run(ctx context.Context) {
 	results, err := s.scan(ctx)
 	now := time.Now().UTC()
@@ -92,6 +96,7 @@ func (s *ZMapScanner) run(ctx context.Context) {
 	s.mu.Unlock()
 }
 
+// scan runs ZMap and keeps only valid results for the selected ports.
 func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 	if _, err := os.Stat(s.allowlist); err != nil {
 		return nil, fmt.Errorf("allowlist: %w", err)
@@ -103,6 +108,7 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 		return nil, fmt.Errorf("zmap ports %s: %w", portList(), err)
 	}
 
+	// Keep each open IP and port only once, even if ZMap reports it again.
 	seen := make(map[string]bool)
 	results := make([]ScanResult, 0)
 	for _, line := range lines {
@@ -128,6 +134,7 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 	return results, nil
 }
 
+// runZMap starts ZMap, optionally through sudo, and returns its output lines.
 func (s *ZMapScanner) runZMap(ctx context.Context, args []string) ([]string, error) {
 	command := "zmap"
 	var stdinReader *strings.Reader
@@ -155,6 +162,7 @@ func (s *ZMapScanner) runZMap(ctx context.Context, args []string) ([]string, err
 	return strings.Split(string(output), "\n"), nil
 }
 
+// portList formats the configured ports for the ZMap command.
 func portList() string {
 	ports := make([]string, len(scanPorts))
 	for i, port := range scanPorts {
@@ -163,6 +171,7 @@ func portList() string {
 	return strings.Join(ports, ",")
 }
 
+// containsPort reports whether a port is included in this scan.
 func containsPort(port int) bool {
 	for _, allowed := range scanPorts {
 		if port == allowed {
@@ -172,6 +181,7 @@ func containsPort(port int) bool {
 	return false
 }
 
+// validateAllowlist checks that the allowlist path points to a regular file.
 func validateAllowlist(path string) error {
 	if strings.TrimSpace(path) == "" {
 		return errors.New("allowlist path is required")
@@ -186,6 +196,7 @@ func validateAllowlist(path string) error {
 	return nil
 }
 
+// loadAllowlist reads non-empty, non-comment lines from a file.
 func loadAllowlist(path string) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
