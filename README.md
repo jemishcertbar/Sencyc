@@ -14,3 +14,19 @@ go run .
 Use `-allowlist /path/to/allowlist.txt` to select another allowlist. By default, ZMap runs through `sudo -n`; use `ZMAP_USE_SUDO=false` when elevated privileges are not needed. PostgreSQL settings are loaded from the repository root `.env` file. Update `POSTGRES_PASSWORD` there with your password. The scanner accepts `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`; environment variables already set in the shell take precedence. `.env` is ignored by Git to keep connection details out of source control. The scanner runs continuously, starts a scan immediately, then waits for `SCAN_INTERVAL` (default `1m`) after each scan completes. Set that value in `.env` to another Go duration such as `30s` or `5m`. Each scan appends a new row to `scan_results` with its observation timestamp; existing history is retained. The scanner removes the old IP/port uniqueness constraint so previous deployments can also store repeated observations.
 
 The frontend is a static interface. It is not served by the Go scanner. No hosting or deployment configuration is included.
+
+## Web app and search API
+
+FastAPI serves both the static frontend and the read-only PostgreSQL search API, so the web app needs only one server. The FastAPI process connects directly to PostgreSQL; it does not start or call the Go scanner.
+
+From the repository root, install dependencies and start the app:
+
+```bash
+cd api_service
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000`. Click Search (or press Enter) to call `GET /api/search`; matching IP/port observations are shown in the page. The frontend uses the same-origin `/api` URL by default. Set `window.SENCYC_API_BASE` before `js/app.js` only if the API is hosted elsewhere.
