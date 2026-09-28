@@ -2,92 +2,41 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
-	"time"
 )
 
 // main starts the scanner, sets up the API and serves the web pages.
 func main() {
-	frontendDir := envOr("FRONTEND_DIR", filepath.Join("..", "frontend"))
-	allowlist := envOr("ZMAP_ALLOWLIST", "lab-allowlist.txt")
-	useSudo, err := strconv.ParseBool(envOr("ZMAP_USE_SUDO", "true"))
+	allowlist := flag.String("allowlist", "lab-allowlist.txt", "file containing authorized hosts to scan")
+	useSudo := flag.Bool("sudo", true, "run ZMap through sudo")
+	flag.Parse()
+
+	if value := os.Getenv("ZMAP_ALLOWLIST"); value != "" && *allowlist == "lab-allowlist.txt" {
+		*allowlist = value
+	}
+	if value := os.Getenv("ZMAP_USE_SUDO"); value != "" {
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			log.Fatalf("invalid ZMAP_USE_SUDO: %v", err)
+		}
+		*useSudo = parsed
+	}
+
+	store, err := NewPostgresStoreFromEnv()
 	if err != nil {
-		log.Fatalf("invalid ZMAP_USE_SUDO: %v", err)
+		log.Fatal(err)
 	}
-
-	scanner := NewZMapScanner(allowlist, useSudo)
-	go runScheduledScans(scanner)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/scan", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "use POST to start a scan"})
-			return
-		}
-		if err := scanner.Start(context.Background()); err != nil {
-			writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
-			return
-		}
-		writeJSON(w, http.StatusAccepted, scanner.Snapshot())
-	})
-	mux.HandleFunc("/api/results", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "use GET to read scan results"})
-			return
-		}
-		writeJSON(w, http.StatusOK, scanner.Snapshot())
-	})
-	mux.Handle("/", http.FileServer(http.Dir(frontendDir)))
-
-	address := envOr("ADDRESS", ":8080")
-	log.Printf("Sencyc is available at http://localhost%s", address)
-	log.Printf("scanning ports: 80, 22, 443; allowlist: %s", allowlist)
-	log.Fatal(http.ListenAndServe(address, loggingMiddleware(mux)))
-}
-
-// envOr returns an environment value, or a default when it is missing.
-func envOr(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+	defer store.Close()
+	if err := store.EnsureSchema(context.Background()); err != nil {
+		log.Fatal(err)
 	}
-	return fallback
-}
-
-// writeJSON sends a value to the client as a JSON response.
-func writeJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(value); err != nil {
-		log.Printf("write JSON response: %v", err)
-	}
-}
-
-// loggingMiddleware logs each request before sending it to the next handler.
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s", r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
-	})
-}
-
-// runScheduledScans starts a scan now and then repeats it every minute.
-func runScheduledScans(scanner *ZMapScanner) {
-	startScan := func() {
-		if err := scanner.Start(context.Background()); err != nil {
-			log.Printf("scheduled scan not started: %v", err)
-			return
-		}
-		log.Printf("scheduled scan started")
-	}
-
-	startScan()
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		startScan()
+	scanner := NewZMapScanner(*allowlist, *useSudo, store)
+	fmt.Printf("Scanning authorized hosts on TCP ports %s\n", portList())
+	if err := scanner.Scan(context.Background()); err != nil {
+		log.Fatal(err)
 	}
 }

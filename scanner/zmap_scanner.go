@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -10,90 +10,50 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 )
 
 var scanPorts = []int{80, 22, 443}
 
-type ScanResult struct {
-	IP           string    `json:"ip"`
-	Port         int       `json:"port"`
-	Protocol     string    `json:"protocol"`
-	State        string    `json:"state"`
-	DiscoveredAt time.Time `json:"discoveredAt"`
-}
-
-type ScanSnapshot struct {
-	Results  []ScanResult `json:"results"`
-	Running  bool         `json:"running"`
-	LastScan *time.Time   `json:"lastScan,omitempty"`
-	Error    string       `json:"error,omitempty"`
-}
-
 type ZMapScanner struct {
 	allowlist string
 	useSudo   bool
-
-	mu       sync.RWMutex
-	results  []ScanResult
-	running  bool
-	lastScan *time.Time
-	err      error
+	store     *PostgresStore
 }
 
-// NewZMapScanner creates a scanner with the allowlist and sudo settings.
-func NewZMapScanner(allowlist string, useSudo bool) *ZMapScanner {
-	return &ZMapScanner{allowlist: allowlist, useSudo: useSudo}
+func NewZMapScanner(allowlist string, useSudo bool, store *PostgresStore) *ZMapScanner {
+	return &ZMapScanner{allowlist: allowlist, useSudo: useSudo, store: store}
 }
 
-// Snapshot returns a safe copy of the latest scan status and results.
-func (s *ZMapScanner) Snapshot() ScanSnapshot {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	results := append([]ScanResult(nil), s.results...)
-	if results == nil {
-		results = []ScanResult{}
-	}
-	var scanError string
-	if s.err != nil {
-		scanError = s.err.Error()
-	}
-	return ScanSnapshot{Results: results, Running: s.running, LastScan: s.lastScan, Error: scanError}
-}
-
-// Start checks the allowlist and begins a scan in the background.
-func (s *ZMapScanner) Start(ctx context.Context) error {
+func (s *ZMapScanner) Scan(ctx context.Context) error {
 	if err := validateAllowlist(s.allowlist); err != nil {
 		return err
 	}
-
-	s.mu.Lock()
-	if s.running {
-		s.mu.Unlock()
-		return errors.New("a scan is already running")
+	results, err := s.scan(ctx)
+	if err != nil {
+		return err
 	}
-	s.running = true
-	s.err = nil
-	s.results = nil
-	s.mu.Unlock()
-
-	go s.run(ctx)
+	if len(results) == 0 {
+		fmt.Println("No open ports found.")
+		return nil
+	}
+	if s.store == nil {
+		return errors.New("PostgreSQL store is not configured")
+	}
+	if err := s.store.SaveResults(ctx, results); err != nil {
+		return fmt.Errorf("save scan results: %w", err)
+	}
+	for _, result := range results {
+		fmt.Printf("%s:%d/%s %s\n", result.IP, result.Port, result.Protocol, result.State)
+	}
+	fmt.Printf("Stored %d scan results in PostgreSQL.\n", len(results))
 	return nil
 }
 
-// run scans the allowlist and saves the final status and results.
-func (s *ZMapScanner) run(ctx context.Context) {
-	results, err := s.scan(ctx)
-	now := time.Now().UTC()
-
-	s.mu.Lock()
-	s.results = results
-	s.running = false
-	s.lastScan = &now
-	s.err = err
-	s.mu.Unlock()
+type ScanResult struct {
+	IP       string
+	Port     int
+	Protocol string
+	State    string
 }
 
 // scan runs ZMap and keeps only valid results for the selected ports.
@@ -102,7 +62,7 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 		return nil, fmt.Errorf("allowlist: %w", err)
 	}
 
-	args := []string{"-p", portList(), "-w", s.allowlist, "-b", "/dev/null", "-O", "csv", "-f", "saddr,sport,classification,success,repeat", "--output-filter=success=1 && repeat=0", "--no-header-row"}
+	args := []string{"-p", portList(), "-w", s.allowlist, "-b", "/dev/null", "-O", "json", "-f", "saddr,sport,classification,success,repeat", "--output-filter=success=1 && repeat=0"}
 	lines, err := s.runZMap(ctx, args)
 	if err != nil {
 		return nil, fmt.Errorf("zmap ports %s: %w", portList(), err)
@@ -112,16 +72,18 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 	seen := make(map[string]bool)
 	results := make([]ScanResult, 0)
 	for _, line := range lines {
-		fields := strings.Split(strings.TrimSpace(line), ",")
-		if len(fields) != 5 {
+		var row struct {
+			IP             string `json:"saddr"`
+			Port           int    `json:"sport"`
+			Classification string `json:"classification"`
+			Success        bool   `json:"success"`
+			Repeat         bool   `json:"repeat"`
+		}
+		if json.Unmarshal([]byte(strings.TrimSpace(line)), &row) != nil {
 			continue
 		}
-		ip := strings.Trim(fields[0], "\" ")
-		port, parseErr := strconv.Atoi(strings.Trim(fields[1], "\" "))
-		classification := strings.Trim(fields[2], "\" ")
-		success := strings.Trim(fields[3], "\" ")
-		repeat := strings.Trim(fields[4], "\" ")
-		if parseErr != nil || net.ParseIP(ip) == nil || !containsPort(port) || classification != "synack" || success != "1" || repeat != "0" {
+		ip, port := row.IP, row.Port
+		if net.ParseIP(ip) == nil || !containsPort(port) || row.Classification != "synack" || !row.Success || row.Repeat {
 			continue
 		}
 		key := ip + ":" + strconv.Itoa(port)
@@ -129,7 +91,7 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 			continue
 		}
 		seen[key] = true
-		results = append(results, ScanResult{IP: ip, Port: port, Protocol: "TCP", State: "open", DiscoveredAt: time.Now().UTC()})
+		results = append(results, ScanResult{IP: ip, Port: port, Protocol: "TCP", State: "open"})
 	}
 	return results, nil
 }
@@ -194,23 +156,4 @@ func validateAllowlist(path string) error {
 		return errors.New("allowlist must be a regular file")
 	}
 	return nil
-}
-
-// loadAllowlist reads non-empty, non-comment lines from a file.
-func loadAllowlist(path string) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var entries []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line != "" && !strings.HasPrefix(line, "#") {
-			entries = append(entries, line)
-		}
-	}
-	return entries, scanner.Err()
 }
