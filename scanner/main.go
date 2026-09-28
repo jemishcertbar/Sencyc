@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 )
 
-// main starts the scanner, sets up the API and serves the web pages.
 func main() {
 	allowlist := flag.String("allowlist", "lab-allowlist.txt", "file containing authorized hosts to scan")
 	useSudo := flag.Bool("sudo", true, "run ZMap through sudo")
@@ -34,9 +36,30 @@ func main() {
 	if err := store.EnsureSchema(context.Background()); err != nil {
 		log.Fatal(err)
 	}
+	interval := time.Minute
+	if value := os.Getenv("SCAN_INTERVAL"); value != "" {
+		interval, err = time.ParseDuration(value)
+		if err != nil || interval <= 0 {
+			log.Fatalf("invalid SCAN_INTERVAL %q: use a positive Go duration such as 1m or 30s", value)
+		}
+	}
 	scanner := NewZMapScanner(*allowlist, *useSudo, store)
-	fmt.Printf("Scanning authorized hosts on TCP ports %s\n", portList())
-	if err := scanner.Scan(context.Background()); err != nil {
-		log.Fatal(err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	fmt.Printf("Scanning authorized hosts on TCP ports %s every %s\n", portList(), interval)
+	for {
+		if err := scanner.Scan(ctx); err != nil {
+			if ctx.Err() != nil {
+				break
+			}
+			log.Printf("scan failed: %v", err)
+		}
+		timer := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
 	}
 }

@@ -54,11 +54,15 @@ func (s *PostgresStore) EnsureSchema(ctx context.Context) error {
         port INTEGER NOT NULL,
         protocol TEXT NOT NULL,
         state TEXT NOT NULL,
-        scanned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE (ip, port)
+        scanned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`)
 	if err != nil {
 		return fmt.Errorf("create scan_results table: %w", err)
+	}
+	// Older scanner versions added this uniqueness constraint. Drop it so each
+	// scan can append a new historical observation for the same IP and port.
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE scan_results DROP CONSTRAINT IF EXISTS scan_results_ip_port_key`); err != nil {
+		return fmt.Errorf("remove scan_results uniqueness constraint: %w", err)
 	}
 	return nil
 }
@@ -70,8 +74,7 @@ func (s *PostgresStore) SaveResults(ctx context.Context, results []ScanResult) e
 	}
 	defer tx.Rollback()
 	stmt, err := tx.PrepareContext(ctx, `INSERT INTO scan_results (ip, port, protocol, state, scanned_at)
-        VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (ip, port) DO UPDATE
-        SET protocol = EXCLUDED.protocol, state = EXCLUDED.state, scanned_at = NOW()`)
+        VALUES ($1, $2, $3, $4, NOW())`)
 	if err != nil {
 		return err
 	}
