@@ -1,3 +1,7 @@
-# Figma
-figma/
 .env
+
+api_service/__pycache__/
+api_service/migrations/__pycache__/
+# Python bytecode and cache folders
+__pycache__/
+*.py[cod]
