@@ -26,7 +26,7 @@ cd api_service
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 8000
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Open `http://127.0.0.1:8000`. Click Search (or press Enter) to call `GET /api/search`; matching IP/port observations are shown in the page. The frontend uses the same-origin `/api` URL by default. Set `window.SENCYC_API_BASE` before `js/app.js` only if the API is hosted elsewhere.
