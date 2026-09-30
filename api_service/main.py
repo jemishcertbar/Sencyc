@@ -87,27 +87,11 @@ def search(
     offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
     query = """
-<<<<<<< HEAD
-        WITH matched_hosts AS (
-            SELECT DISTINCT ip FROM scan_results WHERE host(ip) ILIKE %s
-            UNION
-            SELECT DISTINCT ip FROM scan_results WHERE port::text ILIKE %s
-        )
-        SELECT host(history.ip) AS ip,
-               ARRAY_AGG(DISTINCT history.port ORDER BY history.port) AS ports,
-               COUNT(*)::int AS observations
-        FROM scan_results AS history
-        INNER JOIN matched_hosts USING (ip)
-        GROUP BY history.ip
-        ORDER BY MAX(history.scanned_at) DESC
-        LIMIT %s
-=======
         SELECT id, host(ip) AS ip, port, protocol, state, scanned_at
         FROM scan_results
         WHERE ip::text ILIKE %s OR port::text ILIKE %s
         ORDER BY scanned_at DESC, id DESC
         LIMIT %s OFFSET %s
->>>>>>> 6bd5aba9dbee5095aec96f4f53af72072d14077b
     """
     pattern = f"%{q.strip()}%"
     count_query = """
@@ -124,14 +108,6 @@ def search(
         raise HTTPException(status_code=503, detail="Could not read search data from PostgreSQL") from exc
 
 
-<<<<<<< HEAD
-@app.get("/api/hosts/{ip}")
-def host_details(ip: str) -> dict[str, Any]:
-    try:
-        address = str(ipaddress.ip_interface(ip).ip if "/" in ip else ipaddress.ip_address(ip))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid IP address") from exc
-=======
 @app.get("/api/monitor")
 def monitor(
     limit: int = Query(default=25, ge=1, le=100),
@@ -175,7 +151,6 @@ def history(
 
 @app.get("/api/asset-details")
 def asset_details(ip: str = Query(min_length=1, max_length=45)) -> list[dict[str, Any]]:
->>>>>>> 6bd5aba9dbee5095aec96f4f53af72072d14077b
     query = """
         SELECT id, host(ip) AS ip, port, protocol, state, scanned_at
         FROM scan_results
@@ -184,25 +159,9 @@ def asset_details(ip: str = Query(min_length=1, max_length=45)) -> list[dict[str
     """
     try:
         with get_connection() as connection:
-<<<<<<< HEAD
-            history = connection.execute(query, (address,)).fetchall()
-        if not history:
-            raise HTTPException(status_code=404, detail="Host not found")
-        return {
-            "ip": address,
-            "ports": sorted({row["port"] for row in history}),
-            "observations": len(history),
-            "history": history,
-        }
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Could not load host history from PostgreSQL") from exc
-=======
             return connection.execute(query, (ip.strip(),)).fetchall()
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Could not read asset details from PostgreSQL") from exc
->>>>>>> 6bd5aba9dbee5095aec96f4f53af72072d14077b
 
 
 # Serve the static frontend from the same FastAPI origin as the data API.
