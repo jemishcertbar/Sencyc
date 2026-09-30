@@ -46,10 +46,6 @@
 }
 
 @media(min-width:901px) {
-    .mobile-menu {
-        display: block
-    }
-
     .sidebar-close {
         display: grid
     }
@@ -92,9 +88,6 @@
         width: 100%
     }
 
-    .settings-layout {
-        grid-template-columns: 1fr
-    }
 
     .form-row {
         grid-template-columns: 1fr
@@ -283,9 +276,6 @@
         gap: 6px
     }
 
-    .settings-layout {
-        grid-template-columns: 180px 1fr
-    }
 }
 
 @media(max-width:700px) {
@@ -314,21 +304,6 @@
         min-height: 36px
     }
 
-    .settings-layout {
-        grid-template-columns: 1fr
-    }
-
-    .settings-menu {
-        display: flex;
-        overflow-x: auto;
-        gap: 4px;
-        padding: 8px
-    }
-
-    .settings-menu button {
-        white-space: nowrap;
-        width: auto
-    }
 
     .chart-summary {
         display: block
@@ -683,59 +658,9 @@
 }
 
 @media(max-width:900px) {
-    .sidebar.collapsed .sidebar-toggle {
-        transform: none
-    }
-
+    .sidebar-toggle,
+    .sidebar.collapsed .sidebar-toggle,
     .sidebar.open .sidebar-toggle {
-        transform: rotate(180deg)
-    }
-}
-
-@media(max-width:900px) {
-    .asset-detail-header {
-        align-items: flex-start;
-        flex-direction: column
-    }
-
-    .asset-detail-actions {
-        width: 100%;
-        flex-wrap: wrap
-    }
-
-    .asset-detail-grid {
-        grid-template-columns: 1fr 1fr
-    }
-
-    .detail-wide {
-        grid-column: span 2
-    }
-}
-
-@media(max-width:560px) {
-    .asset-detail-grid {
-        grid-template-columns: 1fr
-    }
-
-    .detail-wide {
-        grid-column: auto
-    }
-
-    .detail-table {
-        overflow: auto
-    }
-
-    .detail-table-row {
-        min-width: 480px
-    }
-
-    .asset-detail-title h1 {
-        font-size: 21px
-    }
-
-    .detail-visual strong {
-        float: none;
-        display: block;
-        margin-top: 5px
+        transform: none;
     }
 }
