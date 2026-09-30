@@ -13,7 +13,7 @@ fetch(sharedHeaderUrl)
     injectMobileSidebarToggle();
 
     const app = document.createElement("script");
-    app.src = new URL("app.js?v=9", headerLoader.src).href;
+    app.src = new URL("app.js?v=10", headerLoader.src).href;
     document.body.appendChild(app);
   })
   .catch((error) => console.error("Could not load the shared header.", error));

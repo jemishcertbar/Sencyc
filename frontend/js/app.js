@@ -162,8 +162,27 @@ const escapeSearchHtml = (value) =>
       character
       ],
   );
+const formatIstDate = (value) =>
+  value
+    ? new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        month: "numeric",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(value))
+    : "—";
+const formatIstTime = (value) =>
+  value
+    ? new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).format(new Date(value))
+    : "—";
 const formatSearchDate = (value) =>
-  value ? new Date(value).toLocaleString() : "—";
+  value ? `${formatIstDate(value)}, ${formatIstTime(value)} IST` : "—";
 function updateTimelineFade(timeline) {
   const wrapper = timeline?.closest(".ip-history-scroll");
   if (!wrapper) return;
@@ -269,8 +288,11 @@ async function loadIpDetails(ip) {
     document.getElementById("ip-port-count").textContent = String(
       new Set(rows.map((row) => row.port)).size,
     );
-    document.getElementById("ip-last-seen").textContent = dates.length
-      ? escapeSearchHtml(formatSearchDate(dates[0]))
+    document.getElementById("ip-last-seen-date").textContent = dates.length
+      ? formatIstDate(dates[0])
+      : "—";
+    document.getElementById("ip-last-seen-time").textContent = dates.length
+      ? `${formatIstTime(dates[0])} IST`
       : "—";
     status.textContent = rows.length
       ? `${rows.length} scan record${rows.length === 1 ? "" : "s"} found for this IP.`

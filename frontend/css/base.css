@@ -2494,3 +2494,20 @@ th {
         grid-template-columns: 1fr;
     }
 }
+
+
+.asset-details-page #ip-address {
+    font-size: 28px;
+}
+
+.asset-details-page .last-seen-value {
+    display: grid;
+    gap: 2px;
+}
+
+.asset-details-page .last-seen-time {
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+}
