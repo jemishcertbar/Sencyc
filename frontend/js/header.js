@@ -3,7 +3,8 @@ const headerLoader = document.currentScript;
 const sharedHeaderUrl = new URL("../header.html", headerLoader.src);
 fetch(sharedHeaderUrl)
   .then((response) => {
-    if (!response.ok) throw new Error(`Header request failed: ${response.status}`);
+    if (!response.ok)
+      throw new Error(`Header request failed: ${response.status}`);
     return response.text();
   })
   .then((markup) => {

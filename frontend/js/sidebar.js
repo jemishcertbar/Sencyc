@@ -4,17 +4,23 @@ function sidebarIcon(name) {
     overview: '<path d="m3 10 5-5 5 5v5H9v-3H7v3H3z"/>',
     search: '<circle cx="7" cy="7" r="3.5"/><path d="m10 10 3 3"/>',
     monitor: '<path d="M2 8h2l2-4 3 8 2-4h3"/><path d="M2 14h12"/>',
-    history: '<path d="M4 2h6l2 2v10H4z"/><path d="M10 2v3h2M6 8h4M6 11h4"/>'
+    history: '<path d="M4 2h6l2 2v10H4z"/><path d="M10 2v3h2M6 8h4M6 11h4"/>',
   };
   return `<svg class="sidebar-icon-svg" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
 }
 
 // Build the sidebar and restore its saved open and collapsed sections.
 function sidebarTemplate() {
-  const workspaceOpen = localStorage.getItem("sencyc-workspace-open") !== "false";
-  const pagePrefix = window.location.pathname.includes("/pages/") ? "" : "pages/";
-  const homeLink = window.location.pathname.includes("/pages/") ? "../index.html" : "index.html";
-  const sidebarCollapsed = localStorage.getItem("sencyc-sidebar-collapsed") === "true";
+  const workspaceOpen =
+    localStorage.getItem("sencyc-workspace-open") !== "false";
+  const pagePrefix = window.location.pathname.includes("/pages/")
+    ? ""
+    : "pages/";
+  const homeLink = window.location.pathname.includes("/pages/")
+    ? "../index.html"
+    : "index.html";
+  const sidebarCollapsed =
+    localStorage.getItem("sencyc-sidebar-collapsed") === "true";
   return `<aside class="sidebar${sidebarCollapsed ? " collapsed" : ""}" id="sidebar">
     <div class="sidebar-header">
       <div class="brand" aria-label="Sencyc"><span class="brand-mark"><span class="brand-fallback">S</span><img class="brand-image" src="" alt="" /></span><span class="brand-name">Sencyc</span></div>

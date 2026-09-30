@@ -153,15 +153,13 @@ function overview() {
   return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Security overview</span><h1>Security overview</h1><p class="subtitle">Your attack surface overview.</p></div></div><section class="search-hero"><span class="eyebrow">Asset discovery</span><h2>Search your attack surface</h2><p>Search scan history by IP address or port.</p><div class="search-box"><input id="hero-search" placeholder="Enter an IP address or port"><button class="button" data-search>Search</button></div></section><div class="stats-grid inventory-stats">${stat("Hosts", "—", "No data", "◈")}${stat("Open ports", "—", "No data", "⌁")}${stat("Certificates", "—", "No data", "◇")}${stat("Technologies", "—", "No data", "▦")}${stat("Domains", "—", "No data", "◎")}${stat("Findings", "—", "No data", "△")}</div><div class="dashboard-grid"><section class="panel"><div class="panel-header"><span class="panel-title">Asset discovery</span><span class="muted-link">No scan data</span></div>${discoveryChart()}</section><section class="panel"><div class="panel-header"><span class="panel-title">Recent activity</span></div><div class="panel empty">Scan activity will appear here when available.</div></section></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Recently discovered assets</span><span class="muted-link">Latest scan results</span></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
 }
 // Search scan history through the independent FastAPI data service.
-const DATA_API = (
-  window.SENCYC_API_BASE || "/api"
-).replace(/\/$/, "");
+const DATA_API = (window.SENCYC_API_BASE || "/api").replace(/\/$/, "");
 const escapeSearchHtml = (value) =>
   String(value ?? "").replace(
     /[&<>"']/g,
     (character) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        character
+      character
       ],
   );
 const formatSearchDate = (value) =>
@@ -174,7 +172,9 @@ async function searchDatabase(query) {
   body.innerHTML =
     '<tr><td colspan="5" class="muted-link">Loading matching scan records…</td></tr>';
   try {
-    const page = Number(document.getElementById("search-page")?.dataset.page || 1);
+    const page = Number(
+      document.getElementById("search-page")?.dataset.page || 1,
+    );
     const params = new URLSearchParams({
       q: query,
       limit: "500",
@@ -195,52 +195,103 @@ async function searchDatabase(query) {
       : `No scan records matched “${query}”.`;
     body.innerHTML = rows.length
       ? rows
-          .map(
-            (row) => {
-              const ip = String(row.ip ?? "");
-              const detailUrl = `?ip=${encodeURIComponent(ip)}`;
-              return `<tr><td><a href="${detailUrl}">${escapeSearchHtml(ip)}</a></td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`;
-            },
-          )
-          .join("")
+        .map((row) => {
+          const ip = String(row.ip ?? "");
+          const detailUrl = new URL(
+            "asset-details.html",
+            window.location.href,
+          );
+          detailUrl.searchParams.set("ip", ip);
+          return `<tr><td><a href="${detailUrl.href}">${escapeSearchHtml(ip)}</a></td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`;
+        })
+        .join("")
       : '<tr><td colspan="5" class="muted-link">No matching database records.</td></tr>';
     const pagination = document.getElementById("search-pagination");
-    if (pagination) pagination.innerHTML = rows.length ? `<button class="button secondary small" data-page-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-page-next ${hasNextPage ? "" : "disabled"}>Next</button>` : "";
-    pagination?.querySelector("[data-page-prev]")?.addEventListener("click", () => { document.getElementById("search-page").dataset.page = String(page - 1); searchDatabase(query); });
-    pagination?.querySelector("[data-page-next]")?.addEventListener("click", () => { document.getElementById("search-page").dataset.page = String(page + 1); searchDatabase(query); });
+    if (pagination)
+      pagination.innerHTML = rows.length
+        ? `<button class="button secondary small" data-page-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-page-next ${hasNextPage ? "" : "disabled"}>Next</button>`
+        : "";
+    pagination
+      ?.querySelector("[data-page-prev]")
+      ?.addEventListener("click", () => {
+        document.getElementById("search-page").dataset.page = String(page - 1);
+        searchDatabase(query);
+      });
+    pagination
+      ?.querySelector("[data-page-next]")
+      ?.addEventListener("click", () => {
+        document.getElementById("search-page").dataset.page = String(page + 1);
+        searchDatabase(query);
+      });
   } catch (error) {
     status.textContent = "Could not load search results.";
     body.innerHTML = `<tr><td colspan="5" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
   }
 }
-function ipDetailView(ip) {
-  const safeIp = escapeSearchHtml(ip);
-  return `<div class="page"><div class="detail-back"><a href="search.html">← Back to search</a></div><div class="page-heading"><div><span class="eyebrow">Asset details</span><h1>${safeIp}</h1><p class="subtitle">Known scan information for this IP address.</p></div></div><section class="stats-grid"><article class="stat-card"><span class="stat-label">Ports observed</span><strong id="ip-port-count">—</strong></article><article class="stat-card"><span class="stat-label">Last observed</span><strong id="ip-last-seen">—</strong></article></section><div class="ip-detail-columns"><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Observed ports</span></div><div class="results-info" id="ip-detail-status">Loading scan details…</div><div class="table-wrap"><table><thead><tr><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="ip-detail-rows"><tr><td colspan="4" class="muted-link">Loading…</td></tr></tbody></table></div></section><section class="panel"><div class="panel-header"><span class="panel-title">History timeline</span></div><div id="ip-history-timeline" class="ip-history-timeline"><p class="muted-link">Loading history…</p></div></section></div><section class="panel" style="margin-top:18px"><div class="panel-header"><span class="panel-title">More asset information</span></div><p class="muted-link">Additional asset details can be added here as they become available.</p></section></div>`;
-}
 async function loadIpDetails(ip) {
   const status = document.getElementById("ip-detail-status");
   const body = document.getElementById("ip-detail-rows");
   if (!status || !body) return;
+  if (!ip) {
+    status.textContent = "No IP address was provided.";
+    body.innerHTML =
+      '<tr><td colspan="4" class="muted-link">Open Asset details from a Search result.</td></tr>';
+    const timeline = document.getElementById("ip-history-timeline");
+    if (timeline)
+      timeline.innerHTML =
+        '<p class="muted-link">No IP address was provided.</p>';
+    return;
+  }
+  document.getElementById("ip-address").textContent = ip;
   try {
     const params = new URLSearchParams({ ip });
     const response = await fetch(`${DATA_API}/asset-details?${params}`);
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || `API error ${response.status}`);
+    if (!response.ok)
+      throw new Error(payload.detail || `API error ${response.status}`);
     const rows = payload;
-    if (!Array.isArray(rows)) throw new Error("Unexpected asset details response from API.");
-    const dates = rows.map((row) => row.scanned_at).filter(Boolean).sort((a, b) => new Date(b) - new Date(a));
-    document.getElementById("ip-port-count").textContent = String(new Set(rows.map((row) => row.port)).size);
-    document.getElementById("ip-last-seen").textContent = dates.length ? escapeSearchHtml(formatSearchDate(dates[0])) : "—";
-    status.textContent = rows.length ? `${rows.length} scan record${rows.length === 1 ? "" : "s"} found for this IP.` : "No scan records found for this IP.";
-    body.innerHTML = rows.length ? rows.map((row) => `<tr><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`).join("") : '<tr><td colspan="4" class="muted-link">No port information available.</td></tr>';
+    if (!Array.isArray(rows))
+      throw new Error("Unexpected asset details response from API.");
+    const dates = rows
+      .map((row) => row.scanned_at)
+      .filter(Boolean)
+      .sort((a, b) => new Date(b) - new Date(a));
+    document.getElementById("ip-port-count").textContent = String(
+      new Set(rows.map((row) => row.port)).size,
+    );
+    document.getElementById("ip-last-seen").textContent = dates.length
+      ? escapeSearchHtml(formatSearchDate(dates[0]))
+      : "—";
+    status.textContent = rows.length
+      ? `${rows.length} scan record${rows.length === 1 ? "" : "s"} found for this IP.`
+      : "No scan records found for this IP.";
+    body.innerHTML = rows.length
+      ? rows
+        .map(
+          (row) =>
+            `<tr><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`,
+        )
+        .join("")
+      : '<tr><td colspan="4" class="muted-link">No port information available.</td></tr>';
     const timeline = document.getElementById("ip-history-timeline");
-    const history = [...rows].sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at));
-    if (timeline) timeline.innerHTML = history.length ? history.map((row) => `<article class="ip-history-item"><time>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</time><strong>Port ${row.port}</strong><span>${escapeSearchHtml(row.protocol)} · ${escapeSearchHtml(row.state)}</span></article>`).join("") : '<p class="muted-link">No history available for this IP yet.</p>';
+    const history = [...rows].sort(
+      (a, b) => new Date(a.scanned_at) - new Date(b.scanned_at),
+    );
+    if (timeline)
+      timeline.innerHTML = history.length
+        ? history
+          .map(
+            (row) =>
+              `<article class="ip-history-item"><time>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</time><strong>Port ${row.port}</strong><span>${escapeSearchHtml(row.protocol)} · ${escapeSearchHtml(row.state)}</span></article>`,
+          )
+          .join("")
+        : '<p class="muted-link">No history available for this IP yet.</p>';
   } catch (error) {
     status.textContent = "Could not load IP details.";
     body.innerHTML = `<tr><td colspan="4" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
     const timeline = document.getElementById("ip-history-timeline");
-    if (timeline) timeline.innerHTML = `<p class="muted-link">${escapeSearchHtml(error.message)}</p>`;
+    if (timeline)
+      timeline.innerHTML = `<p class="muted-link">${escapeSearchHtml(error.message)}</p>`;
   }
 }
 async function loadMonitor(page = 1) {
@@ -250,26 +301,42 @@ async function loadMonitor(page = 1) {
   const pageSize = 25;
   status.textContent = "Loading monitored hosts…";
   try {
-    const params = new URLSearchParams({ limit: String(pageSize), offset: String((page - 1) * pageSize) });
+    const params = new URLSearchParams({
+      limit: String(pageSize),
+      offset: String((page - 1) * pageSize),
+    });
     const response = await fetch(`${DATA_API}/monitor?${params}`);
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || `API error ${response.status}`);
-    if (!Array.isArray(payload.results)) throw new Error("Unexpected monitor response from API.");
+    if (!response.ok)
+      throw new Error(payload.detail || `API error ${response.status}`);
+    if (!Array.isArray(payload.results))
+      throw new Error("Unexpected monitor response from API.");
     const rows = payload.results;
     const total = Number(payload.total || 0);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     status.textContent = total
       ? `Showing ${(page - 1) * pageSize + 1}–${Math.min((page - 1) * pageSize + rows.length, total)} of ${total} monitored hosts.`
       : "No monitored hosts are available yet.";
-    body.innerHTML = rows.length ? rows.map((row) =>
-      `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.open_ports}</td><td>${escapeSearchHtml(formatSearchDate(row.last_seen))}</td></tr>`,
-    ).join("") : '<tr><td colspan="3" class="muted-link">No scan observations found.</td></tr>';
+    body.innerHTML = rows.length
+      ? rows
+        .map(
+          (row) =>
+            `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.open_ports}</td><td>${escapeSearchHtml(formatSearchDate(row.last_seen))}</td></tr>`,
+        )
+        .join("")
+      : '<tr><td colspan="3" class="muted-link">No scan observations found.</td></tr>';
     const pagination = document.getElementById("monitor-pagination");
-    if (pagination) pagination.innerHTML = totalPages > 1
-      ? `<button class="button secondary small" data-monitor-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-monitor-next ${page >= totalPages ? "disabled" : ""}>Next</button>`
-      : "";
-    pagination?.querySelector("[data-monitor-prev]")?.addEventListener("click", () => loadMonitor(page - 1));
-    pagination?.querySelector("[data-monitor-next]")?.addEventListener("click", () => loadMonitor(page + 1));
+    if (pagination)
+      pagination.innerHTML =
+        totalPages > 1
+          ? `<button class="button secondary small" data-monitor-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-monitor-next ${page >= totalPages ? "disabled" : ""}>Next</button>`
+          : "";
+    pagination
+      ?.querySelector("[data-monitor-prev]")
+      ?.addEventListener("click", () => loadMonitor(page - 1));
+    pagination
+      ?.querySelector("[data-monitor-next]")
+      ?.addEventListener("click", () => loadMonitor(page + 1));
   } catch (error) {
     status.textContent = "Could not load monitored hosts.";
     body.innerHTML = `<tr><td colspan="3" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
@@ -283,26 +350,42 @@ async function loadHistory(page = 1) {
   const pageSize = 25;
   status.textContent = "Loading scan history…";
   try {
-    const params = new URLSearchParams({ limit: String(pageSize), offset: String((page - 1) * pageSize) });
+    const params = new URLSearchParams({
+      limit: String(pageSize),
+      offset: String((page - 1) * pageSize),
+    });
     const response = await fetch(`${DATA_API}/history?${params}`);
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || `API error ${response.status}`);
-    if (!Array.isArray(payload.results)) throw new Error("Unexpected history response from API.");
+    if (!response.ok)
+      throw new Error(payload.detail || `API error ${response.status}`);
+    if (!Array.isArray(payload.results))
+      throw new Error("Unexpected history response from API.");
     const rows = payload.results;
     const total = Number(payload.total || 0);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     status.textContent = total
       ? `Showing ${(page - 1) * pageSize + 1}–${Math.min((page - 1) * pageSize + rows.length, total)} of ${total} scan observations.`
       : "No scan history is available yet.";
-    body.innerHTML = rows.length ? rows.map((row) =>
-      `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`,
-    ).join("") : '<tr><td colspan="5" class="muted-link">No scan observations found.</td></tr>';
+    body.innerHTML = rows.length
+      ? rows
+        .map(
+          (row) =>
+            `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`,
+        )
+        .join("")
+      : '<tr><td colspan="5" class="muted-link">No scan observations found.</td></tr>';
     const pagination = document.getElementById("history-pagination");
-    if (pagination) pagination.innerHTML = totalPages > 1
-      ? `<button class="button secondary small" data-history-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-history-next ${page >= totalPages ? "disabled" : ""}>Next</button>`
-      : "";
-    pagination?.querySelector("[data-history-prev]")?.addEventListener("click", () => loadHistory(page - 1));
-    pagination?.querySelector("[data-history-next]")?.addEventListener("click", () => loadHistory(page + 1));
+    if (pagination)
+      pagination.innerHTML =
+        totalPages > 1
+          ? `<button class="button secondary small" data-history-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-history-next ${page >= totalPages ? "disabled" : ""}>Next</button>`
+          : "";
+    pagination
+      ?.querySelector("[data-history-prev]")
+      ?.addEventListener("click", () => loadHistory(page - 1));
+    pagination
+      ?.querySelector("[data-history-next]")
+      ?.addEventListener("click", () => loadHistory(page + 1));
   } catch (error) {
     status.textContent = "Could not load scan history.";
     body.innerHTML = `<tr><td colspan="5" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
@@ -310,8 +393,6 @@ async function loadHistory(page = 1) {
 }
 
 function searchView(query = "") {
-  const ip = new URLSearchParams(window.location.search).get("ip");
-  if (ip) return ipDetailView(ip);
   const initialQuery =
     query || new URLSearchParams(window.location.search).get("query") || "";
   const safeQuery = escapeSearchHtml(initialQuery);
@@ -319,20 +400,37 @@ function searchView(query = "") {
 }
 // render chooses a page, puts it on screen and connects its controls.
 function render(view, extra = "") {
+  if (view === "asset-details") {
+    breadcrumb.textContent = "Asset details";
+    document
+      .querySelectorAll(".nav-item")
+      .forEach((item) =>
+        item.classList.toggle("active", item.dataset.view === "search"),
+      );
+    loadIpDetails(new URLSearchParams(window.location.search).get("ip") || "");
+    return;
+  }
   const views = {
     overview,
     search: () => searchView(extra),
-    monitor: () => `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>Monitor</h1><p class="subtitle">Monitor saved searches and review changes as scan data becomes available.</p></div></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Monitored hosts</span></div><div class="results-info" id="monitor-status">Loading monitored hosts…</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Open ports</th><th>Last observed</th></tr></thead><tbody id="monitor-results"><tr><td colspan="3" class="muted-link">Loading…</td></tr></tbody></table></div><div id="monitor-pagination" class="search-pagination"></div></section></div>`,
-    history: () => `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>History</h1><p class="subtitle">Review scan observations recorded over time.</p></div></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Scan history</span></div><div class="results-info" id="history-status">Loading scan history…</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="history-results"><tr><td colspan="5" class="muted-link">Loading…</td></tr></tbody></table></div><div id="history-pagination" class="search-pagination"></div></section></div>`,
+    monitor: () =>
+      `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>Monitor</h1><p class="subtitle">Monitor saved searches and review changes as scan data becomes available.</p></div></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Monitored hosts</span></div><div class="results-info" id="monitor-status">Loading monitored hosts…</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Open ports</th><th>Last observed</th></tr></thead><tbody id="monitor-results"><tr><td colspan="3" class="muted-link">Loading…</td></tr></tbody></table></div><div id="monitor-pagination" class="search-pagination"></div></section></div>`,
+    history: () =>
+      `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>History</h1><p class="subtitle">Review scan observations recorded over time.</p></div></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Scan history</span></div><div class="results-info" id="history-status">Loading scan history…</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="history-results"><tr><td colspan="5" class="muted-link">Loading…</td></tr></tbody></table></div><div id="history-pagination" class="search-pagination"></div></section></div>`,
   };
   root.innerHTML = (views[view] || overview)();
   breadcrumb.textContent =
-    view === "search" && new URLSearchParams(window.location.search).has("ip")
-      ? "Asset details"
-      : ({ overview: "Dashboard", search: "Search", monitor: "Monitor", history: "History" }[view] || "Dashboard");
-  document.querySelectorAll(".nav-item").forEach((item) =>
-    item.classList.toggle("active", item.dataset.view === view),
-  );
+    {
+      overview: "Dashboard",
+      search: "Search",
+      monitor: "Monitor",
+      history: "History",
+    }[view] || "Dashboard";
+  document
+    .querySelectorAll(".nav-item")
+    .forEach((item) =>
+      item.classList.toggle("active", item.dataset.view === view),
+    );
   bind();
   if (view === "monitor") loadMonitor();
   if (view === "history") loadHistory();
@@ -340,7 +438,9 @@ function render(view, extra = "") {
 // bind connects buttons, links and filters on the page to their actions.
 function bind() {
   const currentView = document.body.dataset.page || "overview";
-  const pagePrefix = window.location.pathname.includes("/pages/") ? "" : "pages/";
+  const pagePrefix = window.location.pathname.includes("/pages/")
+    ? ""
+    : "pages/";
   document
     .querySelectorAll("[data-view]")
     .forEach((b) =>
@@ -371,11 +471,10 @@ function bind() {
       };
   });
   if (currentView === "search") {
-    const params = new URLSearchParams(window.location.search);
-    const ip = params.get("ip");
-    const initialQuery = params.get("query");
-    if (ip) loadIpDetails(ip);
-    else if (initialQuery) searchDatabase(initialQuery);
+    const initialQuery = new URLSearchParams(window.location.search).get(
+      "query",
+    );
+    if (initialQuery) searchDatabase(initialQuery);
   }
 }
 document.querySelectorAll(".nav-item").forEach((item) =>
