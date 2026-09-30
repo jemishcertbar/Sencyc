@@ -164,6 +164,16 @@ const escapeSearchHtml = (value) =>
   );
 const formatSearchDate = (value) =>
   value ? new Date(value).toLocaleString() : "—";
+function updateTimelineFade(timeline) {
+  const wrapper = timeline?.closest(".ip-history-scroll");
+  if (!wrapper) return;
+  const hasBefore = timeline.scrollTop > 2;
+  const hasMore =
+    timeline.scrollHeight > timeline.clientHeight + 1 &&
+    timeline.scrollTop + timeline.clientHeight < timeline.scrollHeight - 2;
+  wrapper.classList.toggle("has-before", hasBefore);
+  wrapper.classList.toggle("has-more", hasMore);
+}
 async function searchDatabase(query) {
   const status = document.getElementById("search-result-status");
   const body = document.getElementById("search-results");
@@ -274,6 +284,10 @@ async function loadIpDetails(ip) {
         .join("")
       : '<tr><td colspan="4" class="muted-link">No port information available.</td></tr>';
     const timeline = document.getElementById("ip-history-timeline");
+    if (timeline && !timeline.dataset.fadeBound) {
+      timeline.addEventListener("scroll", () => updateTimelineFade(timeline), { passive: true });
+      timeline.dataset.fadeBound = "true";
+    }
     const history = [...rows].sort(
       (a, b) => new Date(a.scanned_at) - new Date(b.scanned_at),
     );
@@ -282,10 +296,11 @@ async function loadIpDetails(ip) {
         ? history
           .map(
             (row) =>
-              `<article class="ip-history-item"><time>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</time><strong>Port ${row.port}</strong><span>${escapeSearchHtml(row.protocol)} · ${escapeSearchHtml(row.state)}</span></article>`,
+              `<article class="ip-history-item"><time>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</time><strong>Port ${row.port}</strong><span class="ip-history-meta"><span>${escapeSearchHtml(row.protocol)}</span><span class="pill active">${escapeSearchHtml(row.state)}</span></span></article>`,
           )
           .join("")
         : '<p class="muted-link">No history available for this IP yet.</p>';
+    requestAnimationFrame(() => updateTimelineFade(timeline));
   } catch (error) {
     status.textContent = "Could not load IP details.";
     body.innerHTML = `<tr><td colspan="4" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;

@@ -113,7 +113,7 @@ def asset_details(ip: str = Query(min_length=1, max_length=45)) -> list[dict[str
     query = """
         SELECT id, host(ip) AS ip, port, protocol, state, scanned_at
         FROM scan_results
-        WHERE ip::text = %s
+        WHERE host(ip) = %s
         ORDER BY scanned_at DESC, id DESC
     """
     try:
