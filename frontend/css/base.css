@@ -2407,3 +2407,49 @@ th {
 .ip-history-item time { font-size: 11px; }
 .ip-history-item strong { color: var(--ink); font-size: 13px; }
 @media (max-width: 900px) { .ip-detail-columns { grid-template-columns: 1fr; } }
+
+
+.asset-details-page .page-heading {
+    margin-bottom: 20px;
+}
+
+.asset-details-page .asset-details-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 560px;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.asset-details-page .asset-details-stats .stat-card {
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+}
+
+.asset-details-page .asset-details-stats .stat-label {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.asset-details-page .asset-details-stats strong {
+    color: var(--ink);
+    font-size: 22px;
+}
+
+.asset-details-page .ip-detail-columns {
+    align-items: stretch;
+    gap: 18px;
+}
+
+.asset-details-page .ip-detail-columns > .panel {
+    min-width: 0;
+    margin-top: 0;
+}
+
+@media (max-width: 560px) {
+    .asset-details-page .asset-details-stats {
+        grid-template-columns: 1fr;
+    }
+}
