@@ -62,7 +62,7 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 		return nil, fmt.Errorf("allowlist: %w", err)
 	}
 
-	args := []string{"-p", portList(), "-w", s.allowlist, "-b", "/dev/null", "-O", "json", "-f", "saddr,sport,classification,success,repeat", "--output-filter=success=1 && repeat=0"}
+	args := []string{"-p", portList(), "-w", s.allowlist, "-b", "/dev/null", "-O", "json", "-f", "saddr,sport,classification,repeat", "--output-filter=repeat=0"}
 	lines, err := s.runZMap(ctx, args)
 	if err != nil {
 		return nil, fmt.Errorf("zmap ports %s: %w", portList(), err)
@@ -76,14 +76,13 @@ func (s *ZMapScanner) scan(ctx context.Context) ([]ScanResult, error) {
 			IP             string `json:"saddr"`
 			Port           int    `json:"sport"`
 			Classification string `json:"classification"`
-			Success        bool   `json:"success"`
 			Repeat         bool   `json:"repeat"`
 		}
 		if json.Unmarshal([]byte(strings.TrimSpace(line)), &row) != nil {
 			continue
 		}
 		ip, port := row.IP, row.Port
-		if net.ParseIP(ip) == nil || !containsPort(port) || row.Classification != "synack" || !row.Success || row.Repeat {
+		if net.ParseIP(ip) == nil || !containsPort(port) || row.Classification != "synack" || row.Repeat {
 			continue
 		}
 		key := ip + ":" + strconv.Itoa(port)
