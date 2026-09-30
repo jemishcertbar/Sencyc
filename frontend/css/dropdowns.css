@@ -24,9 +24,24 @@
   align-items: center;
 }
 
-.show-more-icon.is-up,
-.nav-section-icon.is-up {
+.show-more-icon.is-up {
   transform: rotate(225deg) !important;
+}
+
+.nav-section-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+  transition: transform .2s ease;
+}
+
+.nav-section-icon.is-up {
+  transform: rotate(180deg);
 }
 
 .button.secondary.small {

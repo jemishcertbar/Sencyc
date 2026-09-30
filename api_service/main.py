@@ -43,20 +43,84 @@ def health() -> dict[str, str]:
 def search(
     q: str = Query(min_length=1, max_length=200),
     limit: int = Query(default=50, ge=1, le=500),
-) -> list[dict[str, Any]]:
+    offset: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
     query = """
-        SELECT id, ip::text AS ip, port, protocol, state, scanned_at
+        SELECT id, host(ip) AS ip, port, protocol, state, scanned_at
         FROM scan_results
         WHERE ip::text ILIKE %s OR port::text ILIKE %s
         ORDER BY scanned_at DESC, id DESC
-        LIMIT %s
+        LIMIT %s OFFSET %s
     """
     pattern = f"%{q.strip()}%"
+    count_query = """
+        SELECT COUNT(*) AS total
+        FROM scan_results
+        WHERE ip::text ILIKE %s OR port::text ILIKE %s
+    """
     try:
         with get_connection() as connection:
-            return connection.execute(query, (pattern, pattern, limit)).fetchall()
+            total = connection.execute(count_query, (pattern, pattern)).fetchone()["total"]
+            results = connection.execute(query, (pattern, pattern, limit, offset)).fetchall()
+            return {"results": results, "total": total}
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Could not read search data from PostgreSQL") from exc
+
+
+@app.get("/api/monitor")
+def monitor(
+    limit: int = Query(default=25, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
+    query = """
+        SELECT host(ip) AS ip, COUNT(DISTINCT port) AS open_ports, MAX(scanned_at) AS last_seen
+        FROM scan_results
+        GROUP BY ip
+        ORDER BY last_seen DESC, ip
+        LIMIT %s OFFSET %s
+    """
+    try:
+        with get_connection() as connection:
+            total = connection.execute("SELECT COUNT(DISTINCT ip) AS total FROM scan_results").fetchone()["total"]
+            results = connection.execute(query, (limit, offset)).fetchall()
+            return {"results": results, "total": total}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not read monitored hosts from PostgreSQL") from exc
+
+
+@app.get("/api/history")
+def history(
+    limit: int = Query(default=25, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
+    query = """
+        SELECT id, host(ip) AS ip, port, protocol, state, scanned_at
+        FROM scan_results
+        ORDER BY scanned_at DESC, id DESC
+        LIMIT %s OFFSET %s
+    """
+    try:
+        with get_connection() as connection:
+            total = connection.execute("SELECT COUNT(*) AS total FROM scan_results").fetchone()["total"]
+            results = connection.execute(query, (limit, offset)).fetchall()
+            return {"results": results, "total": total}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not read scan history from PostgreSQL") from exc
+
+
+@app.get("/api/asset-details")
+def asset_details(ip: str = Query(min_length=1, max_length=45)) -> list[dict[str, Any]]:
+    query = """
+        SELECT id, host(ip) AS ip, port, protocol, state, scanned_at
+        FROM scan_results
+        WHERE ip::text = %s
+        ORDER BY scanned_at DESC, id DESC
+    """
+    try:
+        with get_connection() as connection:
+            return connection.execute(query, (ip.strip(),)).fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not read asset details from PostgreSQL") from exc
 
 
 # Serve the static frontend from the same FastAPI origin as the data API.

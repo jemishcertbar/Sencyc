@@ -1,9 +1,5 @@
-const assets = [];
-const discoveryPoints = [];
-const discoveryDates = [];
-const root = document.getElementById("view-root"),
-  toast = document.getElementById("toast"),
-  breadcrumb = document.getElementById("breadcrumb");
+const root = document.getElementById("view-root");
+const breadcrumb = document.getElementById("breadcrumb");
 const themeToggle = document.getElementById("themeToggle");
 const sidebar = document.getElementById("sidebar");
 const sidebarBackdrop = document.getElementById("sidebarBackdrop");
@@ -77,7 +73,7 @@ function setTheme(theme) {
   scrollToTopButton.style.color = "#ffffff";
   if (themeToggle) {
     themeToggle.title = dark ? "Switch to light mode" : "Switch to dark mode";
-    themeToggle.innerHTML = `<span class="theme-icon">${dark ? "☀" : "☾"}</span><span class="theme-label">${dark ? "Light mode" : "Dark mode"}</span>`;
+    themeToggle.innerHTML = `<span class="theme-icon">${dark ? "☀" : "☾"}</span><span class="theme-label">${dark ? "Light Mode" : "Dark Mode"}</span>`;
   }
 }
 // Add the show-more control to the overview dashboard.
@@ -144,12 +140,6 @@ if (sidebarToggle) {
         : closeSidebar();
 }
 updateSidebarToggleState();
-// notify shows a short message at the bottom of the page.
-function notify(message) {
-  toast.textContent = message;
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2500);
-}
 // stat builds the HTML for one dashboard number card.
 function stat(label, value, trend, icon, down = false) {
   return `<div class="stat-card"><div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div><div class="stat-value">${value}</div><span class="trend ${down ? "down" : ""}">${trend}</span></div>`;
@@ -158,31 +148,9 @@ function stat(label, value, trend, icon, down = false) {
 function discoveryChart() {
   return `<div class="chart-summary"><span><b>—</b> assets discovered</span><span class="chart-change">No scan data</span></div><div class="chart-shell"><div class="chart-y-axis"><span>—</span><span>—</span><span>—</span><span>—</span><span>0</span></div><div class="chart-area"><div class="chart"></div><div class="chart-labels"></div></div></div><div class="chart-legend"><span><i class="legend-dot"></i>Scan results will appear here when available</span></div>`;
 }
-// assetRows builds table rows for the given list of assets.
-function assetRows(list = assets) {
-  return list
-    .map(
-      (a) =>
-        `<tr><td><a class="asset-link" href="#asset/${encodeURIComponent(a.name)}" data-open="${a.name}"><div class="asset-name">${a.name}</div></a><div class="asset-type">${a.type}</div></td><td>${a.ip}</td><td>${a.port}</td><td>${a.tech}</td><td><span class="pill ${a.risk.toLowerCase()}">${a.risk}</span></td><td><span class="pill active">${a.status}</span></td></tr>`,
-    )
-    .join("");
-}
-// assetDetail builds the detail page for one asset.
-function assetDetail(name) {
-  return `<div class="page asset-detail-page"><div class="detail-back"><a href="assets.html">← Back to assets</a></div><section class="panel empty"><strong>No asset data</strong>Asset details will appear when scan results are stored.</section></div>`;
-}
 // overview builds the main dashboard page.
 function overview() {
-  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Security overview</span><h1>Security overview</h1><p class="subtitle">Your attack surface overview.</p></div></div><section class="search-hero"><span class="eyebrow">Asset discovery</span><h2>Search your attack surface</h2><p>Search scan history by IP address or port.</p><div class="search-box"><input id="hero-search" placeholder="Enter an IP address or port"><select id="hero-search-limit" class="search-limit" title="Results limit"><option value="50">50 results</option><option value="100">100 results</option><option value="500">500 results</option></select><button class="button" data-search>Search</button></div></section><div class="stats-grid inventory-stats">${stat("Hosts", "—", "No data", "◈")}${stat("Open ports", "—", "No data", "⌁")}${stat("Certificates", "—", "No data", "◇")}${stat("Technologies", "—", "No data", "▦")}${stat("Domains", "—", "No data", "◎")}${stat("Findings", "—", "No data", "△")}</div><div class="dashboard-grid"><section class="panel"><div class="panel-header"><span class="panel-title">Asset discovery</span><span class="muted-link">No scan data</span></div>${discoveryChart()}</section><section class="panel"><div class="panel-header"><span class="panel-title">Recent activity</span></div><div class="panel empty">Scan activity will appear here when available.</div></section></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Recently discovered assets</span><span class="muted-link" data-view-link="assets">View all assets →</span></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
-}
-// listView builds either the asset table or the findings table.
-function listView(title, subtitle, kind) {
-  const isFind = kind === "findings";
-  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${isFind ? "Risk management" : "Asset inventory"}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div></div><div class="stats-grid">${stat(isFind ? "Open findings" : "Total assets", "—", "No data", "◈")}${stat("Critical", "—", "No data", "△")}${stat(isFind ? "Resolved this month" : "New this week", "—", "No data", "✦")}${stat("Monitored", "—", "No data", "✓")}</div><section class="panel table-panel"><div class="page-toolbar"><input class="filter-input" id="table-filter" placeholder="⌕  Filter ${isFind ? "findings" : "assets"}..." disabled><button class="button secondary small" disabled>${dropdown("All types")}</button><button class="button secondary small" disabled>${dropdown("Risk")}</button><span class="toolbar-spacer"></span><button class="button secondary small" data-action="export" disabled>Export CSV</button></div><div class="results-info">No scan results available.</div><div class="table-wrap"><table><thead><tr><th>${isFind ? "Finding" : "Asset"}</th><th>${isFind ? "Affected asset" : "IP address"}</th><th>${isFind ? "Category" : "Open ports"}</th><th>${isFind ? "Detected" : "Technologies"}</th><th>Risk</th><th>Status</th></tr></thead><tbody id="data-rows"><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
-}
-// dropdown builds the label and icon used by a menu control.
-function dropdown(label) {
-  return `<span class="dropdown-label">${label}</span><span class="dropdown-icon" aria-hidden="true"></span>`;
+  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Security overview</span><h1>Security overview</h1><p class="subtitle">Your attack surface overview.</p></div></div><section class="search-hero"><span class="eyebrow">Asset discovery</span><h2>Search your attack surface</h2><p>Search scan history by IP address or port.</p><div class="search-box"><input id="hero-search" placeholder="Enter an IP address or port"><button class="button" data-search>Search</button></div></section><div class="stats-grid inventory-stats">${stat("Hosts", "—", "No data", "◈")}${stat("Open ports", "—", "No data", "⌁")}${stat("Certificates", "—", "No data", "◇")}${stat("Technologies", "—", "No data", "▦")}${stat("Domains", "—", "No data", "◎")}${stat("Findings", "—", "No data", "△")}</div><div class="dashboard-grid"><section class="panel"><div class="panel-header"><span class="panel-title">Asset discovery</span><span class="muted-link">No scan data</span></div>${discoveryChart()}</section><section class="panel"><div class="panel-header"><span class="panel-title">Recent activity</span></div><div class="panel empty">Scan activity will appear here when available.</div></section></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Recently discovered assets</span><span class="muted-link">Latest scan results</span></div><div class="table-wrap"><table><thead><tr><th>Asset</th><th>IP address</th><th>Open ports</th><th>Technologies</th><th>Risk</th><th>Status</th></tr></thead><tbody><tr><td colspan="6" class="muted-link">No scan results available.</td></tr></tbody></table></div></section></div>`;
 }
 // Search scan history through the independent FastAPI data service.
 const DATA_API = (
@@ -198,7 +166,7 @@ const escapeSearchHtml = (value) =>
   );
 const formatSearchDate = (value) =>
   value ? new Date(value).toLocaleString() : "—";
-async function searchDatabase(query, limit) {
+async function searchDatabase(query) {
   const status = document.getElementById("search-result-status");
   const body = document.getElementById("search-results");
   if (!status || !body) return;
@@ -206,149 +174,193 @@ async function searchDatabase(query, limit) {
   body.innerHTML =
     '<tr><td colspan="5" class="muted-link">Loading matching scan records…</td></tr>';
   try {
-    const params = new URLSearchParams({ q: query, limit: String(limit) });
+    const page = Number(document.getElementById("search-page")?.dataset.page || 1);
+    const params = new URLSearchParams({
+      q: query,
+      limit: "500",
+    });
     const response = await fetch(`${DATA_API}/search?${params}`);
-    const data = await response.json();
+    const payload = await response.json();
     if (!response.ok)
-      throw new Error(data.detail || `API error ${response.status}`);
-    status.textContent = data.length
-      ? `${data.length} matching scan record${data.length === 1 ? "" : "s"} for “${query}”`
+      throw new Error(payload.detail || `API error ${response.status}`);
+    const rowsFromApi = Array.isArray(payload) ? payload : payload.results;
+    if (!Array.isArray(rowsFromApi))
+      throw new Error("Unexpected search response from API.");
+    const total = Array.isArray(payload) ? rowsFromApi.length : payload.total;
+    const totalPages = Math.ceil(total / 10);
+    const hasNextPage = page < totalPages;
+    const rows = rowsFromApi.slice((page - 1) * 10, page * 10);
+    status.textContent = rows.length
+      ? `Showing ${(page - 1) * 10 + 1}–${(page - 1) * 10 + rows.length} results for “${query}”`
       : `No scan records matched “${query}”.`;
-    body.innerHTML = data.length
-      ? data
+    body.innerHTML = rows.length
+      ? rows
           .map(
-            (row) =>
-              `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`,
+            (row) => {
+              const ip = String(row.ip ?? "");
+              const detailUrl = `?ip=${encodeURIComponent(ip)}`;
+              return `<tr><td><a href="${detailUrl}">${escapeSearchHtml(ip)}</a></td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`;
+            },
           )
           .join("")
       : '<tr><td colspan="5" class="muted-link">No matching database records.</td></tr>';
+    const pagination = document.getElementById("search-pagination");
+    if (pagination) pagination.innerHTML = rows.length ? `<button class="button secondary small" data-page-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-page-next ${hasNextPage ? "" : "disabled"}>Next</button>` : "";
+    pagination?.querySelector("[data-page-prev]")?.addEventListener("click", () => { document.getElementById("search-page").dataset.page = String(page - 1); searchDatabase(query); });
+    pagination?.querySelector("[data-page-next]")?.addEventListener("click", () => { document.getElementById("search-page").dataset.page = String(page + 1); searchDatabase(query); });
   } catch (error) {
     status.textContent = "Could not load search results.";
     body.innerHTML = `<tr><td colspan="5" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
   }
 }
+function ipDetailView(ip) {
+  const safeIp = escapeSearchHtml(ip);
+  return `<div class="page"><div class="detail-back"><a href="search.html">← Back to search</a></div><div class="page-heading"><div><span class="eyebrow">Asset details</span><h1>${safeIp}</h1><p class="subtitle">Known scan information for this IP address.</p></div></div><section class="stats-grid"><article class="stat-card"><span class="stat-label">Ports observed</span><strong id="ip-port-count">—</strong></article><article class="stat-card"><span class="stat-label">Last observed</span><strong id="ip-last-seen">—</strong></article></section><div class="ip-detail-columns"><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Observed ports</span></div><div class="results-info" id="ip-detail-status">Loading scan details…</div><div class="table-wrap"><table><thead><tr><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="ip-detail-rows"><tr><td colspan="4" class="muted-link">Loading…</td></tr></tbody></table></div></section><section class="panel"><div class="panel-header"><span class="panel-title">History timeline</span></div><div id="ip-history-timeline" class="ip-history-timeline"><p class="muted-link">Loading history…</p></div></section></div><section class="panel" style="margin-top:18px"><div class="panel-header"><span class="panel-title">More asset information</span></div><p class="muted-link">Additional asset details can be added here as they become available.</p></section></div>`;
+}
+async function loadIpDetails(ip) {
+  const status = document.getElementById("ip-detail-status");
+  const body = document.getElementById("ip-detail-rows");
+  if (!status || !body) return;
+  try {
+    const params = new URLSearchParams({ ip });
+    const response = await fetch(`${DATA_API}/asset-details?${params}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || `API error ${response.status}`);
+    const rows = payload;
+    if (!Array.isArray(rows)) throw new Error("Unexpected asset details response from API.");
+    const dates = rows.map((row) => row.scanned_at).filter(Boolean).sort((a, b) => new Date(b) - new Date(a));
+    document.getElementById("ip-port-count").textContent = String(new Set(rows.map((row) => row.port)).size);
+    document.getElementById("ip-last-seen").textContent = dates.length ? escapeSearchHtml(formatSearchDate(dates[0])) : "—";
+    status.textContent = rows.length ? `${rows.length} scan record${rows.length === 1 ? "" : "s"} found for this IP.` : "No scan records found for this IP.";
+    body.innerHTML = rows.length ? rows.map((row) => `<tr><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`).join("") : '<tr><td colspan="4" class="muted-link">No port information available.</td></tr>';
+    const timeline = document.getElementById("ip-history-timeline");
+    const history = [...rows].sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at));
+    if (timeline) timeline.innerHTML = history.length ? history.map((row) => `<article class="ip-history-item"><time>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</time><strong>Port ${row.port}</strong><span>${escapeSearchHtml(row.protocol)} · ${escapeSearchHtml(row.state)}</span></article>`).join("") : '<p class="muted-link">No history available for this IP yet.</p>';
+  } catch (error) {
+    status.textContent = "Could not load IP details.";
+    body.innerHTML = `<tr><td colspan="4" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
+    const timeline = document.getElementById("ip-history-timeline");
+    if (timeline) timeline.innerHTML = `<p class="muted-link">${escapeSearchHtml(error.message)}</p>`;
+  }
+}
+async function loadMonitor(page = 1) {
+  const status = document.getElementById("monitor-status");
+  const body = document.getElementById("monitor-results");
+  if (!status || !body) return;
+  const pageSize = 25;
+  status.textContent = "Loading monitored hosts…";
+  try {
+    const params = new URLSearchParams({ limit: String(pageSize), offset: String((page - 1) * pageSize) });
+    const response = await fetch(`${DATA_API}/monitor?${params}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || `API error ${response.status}`);
+    if (!Array.isArray(payload.results)) throw new Error("Unexpected monitor response from API.");
+    const rows = payload.results;
+    const total = Number(payload.total || 0);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    status.textContent = total
+      ? `Showing ${(page - 1) * pageSize + 1}–${Math.min((page - 1) * pageSize + rows.length, total)} of ${total} monitored hosts.`
+      : "No monitored hosts are available yet.";
+    body.innerHTML = rows.length ? rows.map((row) =>
+      `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.open_ports}</td><td>${escapeSearchHtml(formatSearchDate(row.last_seen))}</td></tr>`,
+    ).join("") : '<tr><td colspan="3" class="muted-link">No scan observations found.</td></tr>';
+    const pagination = document.getElementById("monitor-pagination");
+    if (pagination) pagination.innerHTML = totalPages > 1
+      ? `<button class="button secondary small" data-monitor-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-monitor-next ${page >= totalPages ? "disabled" : ""}>Next</button>`
+      : "";
+    pagination?.querySelector("[data-monitor-prev]")?.addEventListener("click", () => loadMonitor(page - 1));
+    pagination?.querySelector("[data-monitor-next]")?.addEventListener("click", () => loadMonitor(page + 1));
+  } catch (error) {
+    status.textContent = "Could not load monitored hosts.";
+    body.innerHTML = `<tr><td colspan="3" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
+  }
+}
+
+async function loadHistory(page = 1) {
+  const status = document.getElementById("history-status");
+  const body = document.getElementById("history-results");
+  if (!status || !body) return;
+  const pageSize = 25;
+  status.textContent = "Loading scan history…";
+  try {
+    const params = new URLSearchParams({ limit: String(pageSize), offset: String((page - 1) * pageSize) });
+    const response = await fetch(`${DATA_API}/history?${params}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || `API error ${response.status}`);
+    if (!Array.isArray(payload.results)) throw new Error("Unexpected history response from API.");
+    const rows = payload.results;
+    const total = Number(payload.total || 0);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    status.textContent = total
+      ? `Showing ${(page - 1) * pageSize + 1}–${Math.min((page - 1) * pageSize + rows.length, total)} of ${total} scan observations.`
+      : "No scan history is available yet.";
+    body.innerHTML = rows.length ? rows.map((row) =>
+      `<tr><td>${escapeSearchHtml(row.ip)}</td><td>${row.port}</td><td>${escapeSearchHtml(row.protocol)}</td><td><span class="pill active">${escapeSearchHtml(row.state)}</span></td><td>${escapeSearchHtml(formatSearchDate(row.scanned_at))}</td></tr>`,
+    ).join("") : '<tr><td colspan="5" class="muted-link">No scan observations found.</td></tr>';
+    const pagination = document.getElementById("history-pagination");
+    if (pagination) pagination.innerHTML = totalPages > 1
+      ? `<button class="button secondary small" data-history-prev ${page <= 1 ? "disabled" : ""}>Previous</button><span>Page ${page} of ${totalPages}</span><button class="button secondary small" data-history-next ${page >= totalPages ? "disabled" : ""}>Next</button>`
+      : "";
+    pagination?.querySelector("[data-history-prev]")?.addEventListener("click", () => loadHistory(page - 1));
+    pagination?.querySelector("[data-history-next]")?.addEventListener("click", () => loadHistory(page + 1));
+  } catch (error) {
+    status.textContent = "Could not load scan history.";
+    body.innerHTML = `<tr><td colspan="5" class="muted-link">${escapeSearchHtml(error.message)}</td></tr>`;
+  }
+}
+
 function searchView(query = "") {
+  const ip = new URLSearchParams(window.location.search).get("ip");
+  if (ip) return ipDetailView(ip);
   const initialQuery =
     query || new URLSearchParams(window.location.search).get("query") || "";
   const safeQuery = escapeSearchHtml(initialQuery);
-  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Discovery</span><h1>Global search</h1><p class="subtitle">Search scan history by IP address or port.</p></div></div><section class="panel" style="margin-bottom:18px"><div class="search-box" style="border:1px solid var(--line);max-width:none"><input id="global-search" value="${safeQuery}" placeholder="Enter an IP address or port"><select id="global-search-limit" class="search-limit" title="Results limit"><option value="10">10 results</option><option value="25">25 results</option><option value="50" selected>50 results</option><option value="100">100 results</option><option value="250">250 results</option><option value="500">500 results</option></select><button class="button" data-search type="button">Search</button></div></section><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Database search results</span></div><div class="results-info" id="search-result-status">${initialQuery ? "Loading search results…" : "Enter an IP address or port, then click Search."}</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="search-results"><tr><td colspan="5" class="muted-link">No search submitted yet.</td></tr></tbody></table></div></section></div>`;
-}
-// simplePage builds a page with a heading and supplied page content.
-function simplePage(title, subtitle, eyebrow, body) {
-  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">${eyebrow}</span><h1>${title}</h1><p class="subtitle">${subtitle}</p></div><button class="button" data-action="create">+ Create new</button></div>${body}</div>`;
+  return `<div class="page"><div class="page-heading"><div><span class="eyebrow">Discovery</span><h1>Global search</h1><p class="subtitle">Search scan history by IP address or port.</p></div></div><section class="panel" style="margin-bottom:18px"><div class="search-box" style="border:1px solid var(--line);max-width:none"><input id="global-search" value="${safeQuery}" placeholder="Enter an IP address or port"><button class="button" data-search type="button">Search</button></div></section><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Database search results</span></div><div class="results-info" id="search-result-status">${initialQuery ? "Loading search results…" : "Enter an IP address or port, then click Search."}</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="search-results"><tr><td colspan="5" class="muted-link">No search submitted yet.</td></tr></tbody></table></div><div id="search-pagination" class="search-pagination"></div><span id="search-page" data-page="1" hidden></span></section></div>`;
 }
 // render chooses a page, puts it on screen and connects its controls.
 function render(view, extra = "") {
-  let html =
-    view === "asset-detail"
-      ? assetDetail(extra)
-      : view === "overview"
-        ? overview()
-        : view === "search"
-          ? searchView(extra)
-          : view === "assets"
-            ? listView(
-                "Assets",
-                "Discover and manage everything exposed across your organization.",
-                "Asset inventory",
-                "assets",
-              )
-            : view === "findings"
-              ? listView(
-                  "Findings",
-                  "Prioritize and remediate risks across your attack surface.",
-                  "Risk management",
-                  "findings",
-                )
-              : view === "watchlists"
-                ? simplePage(
-                    "Watchlists",
-                    "Monitor saved searches and get notified when they change.",
-                    "Continuous monitoring",
-                    `<section class="panel empty"><strong>No watchlists</strong></section>`,
-                  )
-                : view === "alerts"
-                  ? simplePage(
-                      "Alerts",
-                      "Stay informed when important changes happen.",
-                      "Notifications",
-                      `<section class="panel empty"><strong>No alerts</strong></section>`,
-                    )
-                  : view === "reports"
-                    ? simplePage(
-                        "Reports",
-                        "Create and schedule security reports for your team.",
-                        "Insights",
-                        `<section class="panel empty"><strong>No reports generated</strong>Build an executive summary or detailed asset report in a few clicks.<br><br><button class="button" data-action="create">Generate a report</button></section>`,
-                      )
-                    : view === "integrations"
-                      ? simplePage(
-                          "Integrations",
-                          "Connect Sencyc to the tools your team already uses.",
-                          "Connections",
-                          `<section class="panel empty"><strong>No integrations configured</strong></section>`,
-                        )
-                      : `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>Settings</h1><p class="subtitle">Manage your profile, workspace, and notification preferences.</p></div></div><div class="settings-layout"><section class="panel settings-menu"><button class="active">Profile</button><button>Workspace</button><button>Notifications</button><button>Security</button><button>API keys</button><button>Audit log</button></section><section class="panel"><div class="panel-header"><span class="panel-title">Profile information</span><button class="button small" data-action="save">Save changes</button></div><div class="form-row"><div class="form-group"><label>First name</label><input value=""></div><div class="form-group"><label>Last name</label><input value=""></div></div><div class="form-group"><label>Email address</label><input value=""></div><div class="form-group"><label>Role</label><input value="" disabled></div></section></div></div>`;
-  root.innerHTML = html;
+  const views = {
+    overview,
+    search: () => searchView(extra),
+    monitor: () => `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>Monitor</h1><p class="subtitle">Monitor saved searches and review changes as scan data becomes available.</p></div></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Monitored hosts</span></div><div class="results-info" id="monitor-status">Loading monitored hosts…</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Open ports</th><th>Last observed</th></tr></thead><tbody id="monitor-results"><tr><td colspan="3" class="muted-link">Loading…</td></tr></tbody></table></div><div id="monitor-pagination" class="search-pagination"></div></section></div>`,
+    history: () => `<div class="page"><div class="page-heading"><div><span class="eyebrow">Workspace</span><h1>History</h1><p class="subtitle">Review scan observations recorded over time.</p></div></div><section class="panel table-panel"><div class="panel-header"><span class="panel-title">Scan history</span></div><div class="results-info" id="history-status">Loading scan history…</div><div class="table-wrap"><table><thead><tr><th>IP address</th><th>Port</th><th>Protocol</th><th>State</th><th>Observed at</th></tr></thead><tbody id="history-results"><tr><td colspan="5" class="muted-link">Loading…</td></tr></tbody></table></div><div id="history-pagination" class="search-pagination"></div></section></div>`,
+  };
+  root.innerHTML = (views[view] || overview)();
   breadcrumb.textContent =
-    view === "asset-detail"
+    view === "search" && new URLSearchParams(window.location.search).has("ip")
       ? "Asset details"
-      : view[0].toUpperCase() + view.slice(1);
-  document
-    .querySelectorAll(".nav-item")
-    .forEach((item) =>
-      item.classList.toggle("active", item.dataset.view === view),
-    );
+      : ({ overview: "Dashboard", search: "Search", monitor: "Monitor", history: "History" }[view] || "Dashboard");
+  document.querySelectorAll(".nav-item").forEach((item) =>
+    item.classList.toggle("active", item.dataset.view === view),
+  );
   bind();
+  if (view === "monitor") loadMonitor();
+  if (view === "history") loadHistory();
 }
 // bind connects buttons, links and filters on the page to their actions.
 function bind() {
   const currentView = document.body.dataset.page || "overview";
-  const pagePrefix = window.location.pathname.includes("/pages/")
-    ? ""
-    : "pages/";
+  const pagePrefix = window.location.pathname.includes("/pages/") ? "" : "pages/";
   document
     .querySelectorAll("[data-view]")
     .forEach((b) =>
       b.classList.toggle("active", b.dataset.view === currentView),
     );
-  document.querySelectorAll("[data-view-link]").forEach(
-    (e) =>
-      (e.onclick = () => {
-        if (e.dataset.viewLink === "assets")
-          window.location.href = `${pagePrefix}assets.html`;
-      }),
-  );
-  document
-    .querySelectorAll("[data-action]")
-    .forEach((e) => (e.onclick = () => notify("This action is unavailable.")));
-  document.querySelectorAll("[data-query]").forEach(
-    (e) =>
-      (e.onclick = () => {
-        const input = document.querySelector("#global-search");
-        if (input) {
-          input.value = e.dataset.query;
-          input.focus();
-        }
-      }),
-  );
   document.querySelectorAll("[data-search]").forEach((button) => {
     const submitSearch = () => {
       const input = document.querySelector("#global-search, #hero-search");
       const query = readSearchQuery(input);
       if (!query) return;
-      const limitSelect = document.querySelector(
-        "#global-search-limit, #hero-search-limit",
-      );
-      const limit = limitSelect ? limitSelect.value : "50";
       if (currentView === "search") {
         const url = new URL(window.location.href);
         url.searchParams.set("query", query);
-        url.searchParams.set("limit", limit);
+        url.searchParams.delete("limit");
         window.history.replaceState({}, "", url);
-        searchDatabase(query, limit);
+        const pageControl = document.getElementById("search-page");
+        if (pageControl) pageControl.dataset.page = "1";
+        searchDatabase(query);
       } else {
-        window.location.href = `${pagePrefix}search.html?query=${encodeURIComponent(query)}&limit=${encodeURIComponent(limit)}`;
+        window.location.href = `${pagePrefix}search.html?query=${encodeURIComponent(query)}`;
       }
     };
     button.onclick = submitSearch;
@@ -360,30 +372,11 @@ function bind() {
   });
   if (currentView === "search") {
     const params = new URLSearchParams(window.location.search);
+    const ip = params.get("ip");
     const initialQuery = params.get("query");
-    if (initialQuery) searchDatabase(initialQuery, params.get("limit") || "50");
+    if (ip) loadIpDetails(ip);
+    else if (initialQuery) searchDatabase(initialQuery);
   }
-  document.querySelectorAll("[data-open]").forEach(
-    (e) =>
-      (e.onclick = (event) => {
-        event.preventDefault();
-        window.location.hash = `asset/${encodeURIComponent(e.dataset.open)}`;
-        render("asset-detail", e.dataset.open);
-      }),
-  );
-  const filter = document.getElementById("table-filter");
-  if (filter)
-    filter.oninput = () => {
-      const term = filter.value.toLowerCase();
-      document
-        .querySelectorAll("#data-rows tr")
-        .forEach(
-          (row) =>
-            (row.style.display = row.textContent.toLowerCase().includes(term)
-              ? ""
-              : "none"),
-        );
-    };
 }
 document.querySelectorAll(".nav-item").forEach((item) =>
   item.addEventListener("click", () => {
@@ -415,19 +408,6 @@ window.addEventListener("scroll", () => {
 });
 scrollToTopButton.onclick = () =>
   window.scrollTo({ top: 0, behavior: "smooth" });
-const initialHash = decodeURIComponent(
-  window.location.hash.replace(/^#asset\//, ""),
-);
-if (window.location.hash.startsWith("#asset/"))
-  render("asset-detail", initialHash);
-else render(document.body.dataset.page || "overview");
+render(document.body.dataset.page || "overview");
 setupOverviewDetails();
 requestAnimationFrame(() => setTimeout(hidePageLoader, 180));
-// Open the selected asset when the address hash changes.
-window.addEventListener("hashchange", () => {
-  if (window.location.hash.startsWith("#asset/"))
-    render(
-      "asset-detail",
-      decodeURIComponent(window.location.hash.replace(/^#asset\//, "")),
-    );
-});
