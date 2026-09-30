@@ -1,4 +1,3 @@
-import ipaddress
 import os
 from pathlib import Path
 from typing import Any
@@ -13,8 +12,6 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT_DIR / ".env")
 
 app = FastAPI(title="Sencyc Data API", version="1.0.0")
-
-
 def get_connection() -> psycopg.Connection[Any]:
     keys = ("POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB")
     missing = [key for key in keys if not os.getenv(key)]
@@ -40,44 +37,6 @@ def health() -> dict[str, str]:
         return {"status": "ok"}
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Database connection failed") from exc
-
-
-@app.get("/api/summary")
-def summary() -> dict[str, Any]:
-    query = """
-        SELECT COUNT(DISTINCT ip)::int AS hosts,
-               COUNT(DISTINCT (ip, port))::int AS open_services,
-               COUNT(DISTINCT port)::int AS ports_observed,
-               COALESCE(ARRAY_AGG(DISTINCT port ORDER BY port), ARRAY[]::int[]) AS port_list,
-               COUNT(*)::int AS observations,
-               COUNT(*) FILTER (WHERE scanned_at >= CURRENT_DATE)::int AS observations_today,
-               MAX(scanned_at) AS latest_scanned_at
-        FROM scan_results
-    """
-    try:
-        with get_connection() as connection:
-            return connection.execute(query).fetchone()
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Could not load dashboard data from PostgreSQL") from exc
-
-
-@app.get("/api/assets")
-def assets(limit: int = Query(default=100, ge=1, le=500)) -> list[dict[str, Any]]:
-    query = """
-        SELECT host(ip) AS ip,
-               ARRAY_AGG(DISTINCT port ORDER BY port) AS ports,
-               COUNT(*)::int AS observations,
-               MAX(scanned_at) AS latest_scanned_at
-        FROM scan_results
-        GROUP BY ip
-        ORDER BY latest_scanned_at DESC
-        LIMIT %s
-    """
-    try:
-        with get_connection() as connection:
-            return connection.execute(query, (limit,)).fetchall()
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Could not load hosts from PostgreSQL") from exc
 
 
 @app.get("/api/search")
