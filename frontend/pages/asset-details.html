@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sencyc scan details for an observed IP address">
+  <title>Asset details | Sencyc Attack Surface Intelligence</title>
+  <link rel="stylesheet" href="../css/styles.css?v=21">
+</head>
+
+<body data-page="asset-details">
+  <div class="app-shell">
+    <div id="sidebar-mount"></div>
+    <main class="main-content">
+      <div id="header-mount"></div>
+      <div id="view-root">
+        <div class="page asset-details-page">
+          <div class="detail-back"><a href="search.html">← Back to search</a></div>
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow">Asset details</span>
+              <h1 id="ip-address"></h1>
+              <p class="subtitle">Known scan information for this IP address.</p>
+            </div>
+          </div>
+          <section class="stats-grid asset-details-stats">
+            <article class="stat-card"><span class="stat-label">Ports observed</span><strong
+                id="ip-port-count">—</strong></article>
+            <article class="stat-card"><span class="stat-label">Last observed</span><strong id="ip-last-seen" class="last-seen-value"><span id="ip-last-seen-date">—</span><span id="ip-last-seen-time" class="last-seen-time">—</span></strong>
+            </article>
+          </section>
+          <div class="ip-detail-columns">
+            <section class="panel">
+              <div class="panel-header"><span class="panel-title">Observed ports</span></div>
+              <div class="results-info" id="ip-detail-status">Loading scan details…</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Port</th>
+                      <th>Protocol</th>
+                      <th>State</th>
+                      <th>Observed at</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ip-detail-rows">
+                    <tr>
+                      <td colspan="4" class="muted-link">Loading…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="panel-header"><span class="panel-title">History timeline</span></div>
+              <div class="ip-history-scroll">
+                <div id="ip-history-timeline" class="ip-history-timeline">
+                  <p class="muted-link">Loading history…</p>
+                </div>
+              </div>
+            </section>
+          </div>
+          <section class="panel" style="margin-top:18px">
+            <div class="panel-header"><span class="panel-title">More asset information</span></div>
+            <p class="muted-link">Additional asset details can be added here as they become available.</p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/sidebar.js?v=2"></script>
+  <script src="../js/search.js"></script>
+  <script src="../js/header.js?v=5"></script>
+</body>
+
+</html>
